@@ -1,7 +1,7 @@
 /* sw.js — cache-first, so the installed app opens without the network.
    CACHE is bumped by deploy.js on every ship; a stale worker would keep
    serving the old app otherwise. */
-const CACHE = 'slate-v13';
+const CACHE = 'slate-v14';
 const FILES = ['./', './index.html', './backend.js', './manifest.webmanifest',
   './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 

@@ -81,6 +81,13 @@
     align-items:center;gap:3px;cursor:pointer;padding:4px 1px;flex:1;min-width:0;font-family:inherit}
   nav button svg{width:21px;height:21px;display:block;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
   nav button.active{color:var(--accent)}
+  /* the Bookmarks tab's own bar, under the header, as in Tally */
+  .subnav{position:sticky;top:calc(47px + env(safe-area-inset-top));z-index:15;display:flex;justify-content:space-around;background:var(--bg);
+    border-bottom:1px solid var(--line);margin:-12px -16px 12px;padding:5px 0 6px}
+  .subnav button{background:none;border:none;color:var(--muted);font-size:9px;display:flex;flex-direction:column;
+    align-items:center;gap:2px;cursor:pointer;padding:2px 1px;flex:1;min-width:0;font-family:inherit;white-space:nowrap}
+  .subnav button svg{width:17px;height:17px;display:block;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .subnav button.active{color:var(--accent)}
   nav button .ico{position:relative;display:inline-block}
   nav button .cnt{position:absolute;top:-5px;left:15px;min-width:15px;height:15px;border-radius:8px;background:var(--accent);color:#fff;
     font-size:9px;font-weight:700;line-height:15px;padding:0 3px;text-align:center}
@@ -251,9 +258,9 @@
 </div>
 <nav id="nav"></nav>
 
-<script src="backend.js?v=13"></script>
+<script src="backend.js?v=14"></script>
 <script>
-const APP_VERSION="13";
+const APP_VERSION="14";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
@@ -479,9 +486,18 @@ const FIXED = {
   home:    { label:'Home',      filter:{ q:'', inc:[{ kind:'tag', name:'home' }], exc:[] },      sort:'custom' },
   finance: { label:'Finance',   filter:{ q:'', inc:[{ kind:'tag', name:'finance' }], exc:[] },   sort:'custom' },
   admin:   { label:'Admin',     filter:{ q:'', inc:[{ kind:'tag', name:'admin' }], exc:[] },     sort:'custom' },
+  /* every task done, the last done first */
+  archive: { label:'Archive',   filter:{ q:'', inc:[{ kind:'status', name:'Done' }], exc:[] },   sort:'done', noNew:true },
 };
 const FIXED_IDS = Object.keys(FIXED);
+/* The bottom bar: This week, Coming up, and Bookmarks - which holds the rest
+   under a bar of its own, as Tally's Settings: Home, Finance, Admin, your
+   bookmarks (All and the ones you made) and the Archive. */
 const LIST_TABS = FIXED_IDS.map((k)=>[k, FIXED[k].label]).concat([['lists', 'Bookmarks']]);
+const GROUP = ['home', 'finance', 'admin', 'lists', 'archive'];
+const SUB_TABS = GROUP.map((k)=>[k, k==='lists' ? 'Bookmarks' : FIXED[k].label]);
+const BAR = [['week', 'This week'], ['nextweek', 'Coming up'], ['group', 'Bookmarks']];
+const inGroup = (k) => GROUP.includes(k);
 const isFixedTab = () => !!FIXED[state.tab];
 const isWeekTab = () => state.tab==='week';
 const isStepsTab = () => !!(FIXED[state.tab] && FIXED[state.tab].steps);
@@ -498,7 +514,10 @@ const userFilter = () => {
 const resetUserFilter = () => { if (isFixedTab()) store.tabFilters[state.tab] = blankFilter(); else store.filter = blankFilter(); };
 /* what the list shows: a fixed tab's own filter, and yours on top */
 const listMatches = (t) => { const u = userFilter();
-  return isFixedTab() ? matches(t, FIXED[state.tab].filter, u.inc.some((e)=>e.kind==='status')) && matches(t, u) : matches(t, u); };
+  /* Done shows when either filter asks for a status (the Archive asks for Done) */
+  if (!isFixedTab()) return matches(t, u);
+  const fx = FIXED[state.tab].filter, st = (f) => f.inc.some((e)=>e.kind==='status');
+  return matches(t, fx, st(u)) && matches(t, u, st(fx)); };
 /* what a new task takes from the list it is made in: both filters' + values */
 const curFilter = () => isFixedTab() ? { q:'', inc:FIXED[state.tab].filter.inc.concat(userFilter().inc), exc:userFilter().exc } : userFilter();
 
@@ -508,7 +527,9 @@ const curFilter = () => isFixedTab() ? { q:'', inc:FIXED[state.tab].filter.inc.c
    its sort and order the same way. In the custom order a task not yet
    placed shows at the top, newest first, until it is dragged. */
 const SORTS = [['custom','Custom'], ['due','Due date'], ['name','Name'], ['person','Assignee'], ['status','Status']];
-const SORT_LABEL = Object.fromEntries(SORTS);
+const SORT_LABEL = Object.assign({ done:'Done date' }, Object.fromEntries(SORTS));
+/* the Archive can also sort by the day each was done */
+const sortsHere = () => state.tab==='archive' ? [['done','Done date']].concat(SORTS) : SORTS;
 /* By status: what is stuck first, then what moves, what waits on someone else, what is still to start. */
 const STATUS_RANK = ['Blocked','In progress','Waiting','Todo','Backlog','Done'];
 const bmLive = () => store.bookmarks.filter((b)=>!b.deleted);
@@ -536,6 +557,7 @@ function shownTasks(){
   const by = {
     due: (a,b) => last(nextDue(a), nextDue(b), (x,y)=>x.localeCompare(y)),
     name: () => 0,
+    done: (a,b) => last(b.doneOn, a.doneOn, (x,y)=>x.localeCompare(y)) || String(b.updated).localeCompare(String(a.updated)),
     person: (a,b) => last(a.assignees[0], b.assignees[0], (x,y)=>x.localeCompare(y, undefined, { sensitivity:'base' })),
     status: (a,b) => STATUS_RANK.indexOf(a.status) - STATUS_RANK.indexOf(b.status) || last(nextDue(a), nextDue(b), (x,y)=>x.localeCompare(y)),
   }[sort] || (()=>0);
@@ -576,6 +598,7 @@ for (const id of FIXED_IDS) {
 /* the bookmarks tab shows All or one of yours; the fixed lists have their own tabs */
 if (FIXED[store.bm]) store.bm = 'all';
 if (LIST_TABS.some(([k])=>k===store.tab)) { state.tab = store.tab; state.lastTab = store.tab; }
+if (!inGroup(store.sub)) store.sub = inGroup(store.tab) ? store.tab : 'home';
 
 /* ------------------------------------------------------- the sheet's rows --
    Tasks: one row per task. The lists sit in one cell each, one line per
@@ -851,11 +874,18 @@ function screenSteps(){
     <div class="tlist">${rows || `<div class="empty">No step with a date.</div>`}</div>
   </div>`;
 }
+function subnav(){
+  return `<div class="subnav">${SUB_TABS.map(([k, label])=>`<button class="${state.tab===k?'active':''}" data-tab="${k}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${label}</button>`).join('')}</div>`;
+}
 function screenTasks(){
   if (isStepsTab()) return screenSteps();
+  if (inGroup(state.tab)) return subnav() + screenList();
+  return screenList();
+}
+function screenList(){
   const f = userFilter(), b = activeBm(), ts = shownTasks(), sort = sortOf();
   const wk = isFixedTab(), changed = wk ? false : b ? filterKey(f) !== filterKey(b.filter) : filterOn(f);
-  const nextSort = SORTS[(SORTS.findIndex(([k])=>k===sort)+1) % SORTS.length][0];
+  const SS = sortsHere(), nextSort = SS[(SS.findIndex(([k])=>k===sort)+1) % SS.length][0];
   const title = wk ? LIST_TABS.find(([k])=>k===state.tab)[1] : b ? b.name : 'Tasks';
   return `
   ${wk ? '' : `<div class="bmbar">${bmShown().map((x)=>`<button class="chip sm${orderKey()===x.id?' on':''}" data-bm="${esc(x.id)}">${esc(x.name)}</button>`).join('')}
@@ -865,7 +895,7 @@ function screenTasks(){
     <h2><span class="ttl">${esc(title)}<span class="n">${ts.length}</span>${b && !wk ? `<button class="bmedit" data-bmedit="${esc(b.id)}" aria-label="Rename or delete this bookmark">✏️</button>` : ''}</span>
       <span class="hbtns"><button class="chip on sm" data-bmsort="${nextSort}">${esc(SORT_LABEL[sort])}</button>
         <span class="fdrop"><button class="fbtn ${filterOn(f)?'act':''}" data-fopen="${state.fopen?0:1}">🔍</button>${state.fopen?filterMenu(f):''}</span>
-        <button class="gbtn" data-tnew="1" aria-label="New task">+</button></span></h2>
+        ${FIXED[state.tab] && FIXED[state.tab].noNew ? '' : '<button class="gbtn" data-tnew="1" aria-label="New task">+</button>'}</span></h2>
     ${filterChips(f)}
     <div class="tlist">${ts.map((t,i)=>{ const nd = sort==='due' ? nextDue(t) : '';
       return `
@@ -1113,16 +1143,19 @@ const ICONS = {
   finance:'<path d="M12 2v20"/><path d="M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
   admin:'<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M8 13h8M8 17h6"/>',
   lists:'<path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.5L5 21V4a1 1 0 0 1 1-1z"/>',
+  archive:'<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/><path d="M10 13h4"/>',
 };
 /* the number on each week: its tasks; red when one of them is late */
 function renderNav(){
   const n = document.getElementById('nav'); if (!n) return;
   const td = TODAY();
-  n.innerHTML = LIST_TABS.map(([k, label])=>{
+  n.innerHTML = BAR.map(([k, label])=>{
+    /* Bookmarks: back to the one of its tabs last showing */
+    const target = k==='group' ? store.sub : k, on = k==='group' ? inGroup(state.tab) : state.tab===k;
     let cnt = '';
     if (k==='week') { const ts = live().filter((t)=>matches(t, WEEK_FILTER[k]));
       if (ts.length) cnt = `<span class="cnt${k==='week' && ts.some((t)=>nextDue(t) < td) ? ' late' : ''}">${ts.length}</span>`; }
-    return `<button class="${state.tab===k?'active':''}" data-tab="${k}"><span class="ico"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${cnt}</span>${label}</button>`; }).join('');
+    return `<button class="${on?'active':''}" data-tab="${k==='group'?'group':k}"><span class="ico"><svg viewBox="0 0 24 24">${ICONS[k==='group'?'lists':k]}</svg>${cnt}</span>${label}</button>`; }).join('');
 }
 /* A redraw changes the page in place: what is the same stays, node for node,
    so the field being typed in is never replaced - on a phone, replacing it
@@ -1195,7 +1228,7 @@ function wire(){
   on('reload', hardReload);
   on('about', ()=>{ state.about={ fresh:true }; state.sync=null; render(); state.about.fresh=false; });
   on('aboutclose', ()=>{ state.about=null; render(); });
-  on('tab', (v)=>{ if (state.edit) keepDraft(true); state.tab=v; state.view=null; state.edit=null; state.about=null; state.fopen=false; state.bmEdit=null;
+  on('tab', (v)=>{ if (state.edit) keepDraft(true); if (v==='group') v = store.sub || 'home'; if (inGroup(v)) store.sub = v; state.tab=v; state.view=null; state.edit=null; state.about=null; state.fopen=false; state.bmEdit=null;
     if (v!=='settings') { state.lastTab = v; store.tab = v; save(); } render(); });
   on('install', async()=>{
     if (INSTALL_EVT) { INSTALL_EVT.prompt(); try { await INSTALL_EVT.userChoice; } catch (e) {} INSTALL_EVT=null; render(); return; }
