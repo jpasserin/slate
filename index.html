@@ -21,59 +21,67 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;background:var(--bg);color:var(--txt);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;font-size:14px;}
-  body{padding-top:env(safe-area-inset-top);padding-bottom:calc(24px + env(safe-area-inset-bottom));}
+  body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
   .wrap{max-width:560px;margin:0 auto;padding:16px 16px 24px;}
 
   header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;
-    margin:0 -16px 14px;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--line);}
+    margin:0 -16px 12px;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--line);}
   /* The name is a button: it opens the About widget. */
   header h1{font-size:20px;margin:0;letter-spacing:.3px;cursor:pointer;user-select:none;-webkit-user-select:none}
   header h1 .dot{color:var(--accent)}
   header .hdrright{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;font-weight:600}
   .syncdot{font-size:11px;font-weight:600;color:var(--muted)}
-  .syncdot.bad{color:var(--bad)}
   .hdrbtn{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;width:28px;height:26px;
     cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
   .hdrbtn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
   .hdrbtn:active{color:var(--accent)}
   .hdrbtn.on{color:var(--accent);border-color:var(--accent)}
 
-  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:10px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;}
   .card h2{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);
-    margin:0 0 9px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:8px;}
-  .card.shut h2{margin-bottom:0}
-  .card h2 .grp{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;-webkit-user-select:none;flex:1}
-  .card h2 .n{color:var(--txt);font-variant-numeric:tabular-nums}
-  .card h2 .chev{font-size:11px;transition:transform .15s;display:inline-block}
-  .card.shut h2 .chev{transform:rotate(-90deg)}
-  .hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:4px;}
+    margin:0 0 6px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .card h2 .n{color:var(--txt);font-variant-numeric:tabular-nums;margin-left:6px}
+  .card h2 .hbtns{display:flex;align-items:center;gap:7px;text-transform:none;letter-spacing:0;font-weight:400}
   .muted{color:var(--muted)}
+  .empty{font-size:12.5px;color:var(--muted);padding:8px 0 4px}
 
-  /* A widget over the bottom half of the screen. */
+  /* A widget over the bottom half of the screen (About, a bookmark). */
   .sheetwrap{position:fixed;inset:0;z-index:40}
   .scrim{position:absolute;inset:0;background:rgba(0,0,0,.5)}
-  .sheet{position:absolute;left:0;right:0;bottom:0;max-height:88vh;background:var(--card);
+  .sheet{position:absolute;left:0;right:0;bottom:0;max-height:82vh;background:var(--card);
     border-top:1px solid var(--line);border-radius:20px 20px 0 0;padding:14px 16px calc(12px + env(safe-area-inset-bottom));
     display:flex;flex-direction:column;gap:5px;overflow-y:auto;max-width:560px;margin:0 auto}
   /* Slides up once, when it opens; a redraw from a chip inside must not replay it. */
   .sheet.enter{animation:up .28s cubic-bezier(.2,.8,.2,1)}
   @keyframes up{from{transform:translateY(100%)}to{transform:none}}
   .sheet h3{margin:0 0 2px;font-size:16px}
-  .sheet .shead{display:flex;align-items:center;gap:8px}
-  .sheet .shead h3{flex:1;margin:0}
-  .sheet .foot{display:flex;gap:8px;padding-top:4px;position:sticky;bottom:calc(-12px - env(safe-area-inset-bottom));background:var(--card);
-    padding-bottom:calc(12px + env(safe-area-inset-bottom));margin-bottom:calc(-12px - env(safe-area-inset-bottom))}
+  .sheet .foot{display:flex;gap:8px;padding-top:4px}
   .sheet .foot .btn.close{flex:0 0 auto;min-width:92px;background:var(--bg2)}
   .sheet .foot .btn.close.arm{background:var(--bad);border-color:var(--bad);color:#fff}
-  .sheet .stamp{font-size:11px;color:var(--muted);margin-top:2px}
 
-  .field{margin-bottom:5px}
+  /* A page of its own (a task, its editor): the content, then Close at the
+     bottom, always in reach however long the page. */
+  .page{padding-bottom:4px}
+  .page .ptitle{display:flex;align-items:flex-start;gap:10px;margin:2px 0 10px}
+  .page .ptitle h2{flex:1;margin:0;font-size:19px;line-height:1.25;overflow-wrap:anywhere}
+  .page .ptitle .gbtn{height:28px;min-width:32px;font-size:14px}
+  .page .sec{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;margin:12px 0 5px;
+    display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .page .sec .gbtn{height:20px;min-width:22px;font-size:13px}
+  .page .stamp{font-size:11px;color:var(--muted);margin-top:12px}
+  .page .info{white-space:pre-wrap;font-size:13.5px;line-height:1.45;overflow-wrap:anywhere}
+  .closebar{position:sticky;bottom:0;z-index:12;margin:14px -16px 0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+    display:flex;gap:8px;background:linear-gradient(to top,var(--bg) 72%,transparent)}
+  .closebar .btn{padding:13px;font-size:15px}
+  .closebar .btn.close{flex:1;background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 6px 22px rgba(0,0,0,.45)}
+
+  .field{margin-bottom:6px}
   .field>label,.field .lab{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10.5px;color:var(--muted);
     margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
   .field .lab .gbtn{height:20px;min-width:22px;font-size:13px}
   input,select,textarea{width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:10px;
     padding:5px 10px;font-size:14px;font-family:inherit;outline:none}
-  textarea{resize:vertical;min-height:58px;line-height:1.4}
+  textarea{resize:vertical;min-height:70px;line-height:1.4}
   input:focus,textarea:focus{border-color:var(--accent)}
   input[type=date]{color-scheme:dark}
   .btnrow{display:flex;gap:7px}
@@ -81,7 +89,7 @@
     font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;flex:1}
   .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
   .btn:disabled{opacity:.45;cursor:default}
-  .btn.danger{flex:0 0 auto;background:none;border-color:var(--bad);color:var(--bad)}
+  .btn.danger{flex:0 0 auto;background:var(--bg2);border-color:var(--bad);color:var(--bad)}
   .btn.danger.arm{background:var(--bad);color:#fff}
   .status{font-size:12.5px;margin-top:6px;font-weight:600}
   .status.ok{color:var(--good)} .status.bad{color:var(--bad)}
@@ -102,24 +110,30 @@
   .chip.sm{padding:2px 9px;font-size:11.5px}
   .chip.add{background:none;color:var(--muted);border-style:dashed}
   .dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
-  .cap{font-size:11px;font-weight:600;border-radius:12px;padding:1px 8px;border:1px solid var(--line);color:var(--txt);background:var(--card2);
+  .cap{font-size:11.5px;font-weight:600;border-radius:12px;padding:2px 9px;border:1px solid var(--line);color:var(--txt);background:var(--card2);
     display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
   .cap .x{opacity:.65;cursor:pointer;font-weight:700}
+  .caps{display:flex;flex-wrap:wrap;gap:5px}
   .tagbox{display:flex;flex-wrap:wrap;gap:5px;align-items:center;background:var(--bg2);border:1px solid var(--line);
     border-radius:10px;padding:3px 8px;cursor:text;min-height:30px}
   .tagbox:focus-within{border-color:var(--accent)}
   .tagbox input{flex:1;min-width:90px;width:auto;background:none;border:0;padding:2px 2px}
   .sugg{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
 
+  /* The status: a dot of its colour. Backlog is black, so it gets a ring. */
+  .sdot{display:inline-block;width:11px;height:11px;border-radius:50%;flex:none}
+  .sdot.ring{box-shadow:0 0 0 1.5px var(--muted) inset}
+  .spick{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 2px}
+
   /* A switch: a label with a sliding knob. */
   .switch{display:flex;align-items:center;gap:10px;margin-top:4px;cursor:pointer;font-size:13.5px}
-    .switch .track{width:40px;height:22px;border-radius:11px;background:var(--line);position:relative;transition:background .15s;flex:none}
+  .switch .track{width:40px;height:22px;border-radius:11px;background:var(--line);position:relative;transition:background .15s;flex:none}
   .switch .track::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}
   .switch .track.on{background:var(--accent)}
   .switch .track.on::after{left:20px}
 
   /* The progress bar: checklist items done over all of them. */
-  .bbar{height:5px;background:var(--bg2);border-radius:4px;overflow:hidden;margin-top:6px}
+  .bbar{height:5px;background:var(--bg2);border-radius:4px;overflow:hidden;margin:2px 0 6px}
   .bbar i{display:block;height:100%;border-radius:4px;background:var(--accent)}
   .bbar i.full{background:var(--good)}
 
@@ -128,27 +142,60 @@
     justify-content:center;font-size:12px;color:#fff;cursor:pointer;font-weight:700}
   .ck.on{background:var(--accent);border-color:var(--accent)}
 
-  /* A task in the list. */
-  .trow{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer}
+  /* The list: a dot and a name, one line each; the handle drags it. */
+  .trow{display:flex;align-items:center;gap:11px;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer}
   .trow:last-child{border-bottom:0}
-  .trow .tm{flex:1;min-width:0}
-  .trow .tn{font-size:14px;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
-  .trow.done .tn{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
-  .trow .ts{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:4px;font-size:11.5px;color:var(--muted)}
-  .trow .ts .m{display:inline-flex;align-items:center;gap:3px;font-variant-numeric:tabular-nums}
-  .trow .ts svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-  .trow .ts .due{color:var(--warn)}
-  .trow .ts .late{color:var(--bad)}
-  .trow .chip{flex:none;margin-top:1px}
+  .trow .tn{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .trow.done .tn{color:var(--muted)}
+  .trow.lift{background:var(--card2);border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.4);padding-left:6px}
+  .drag{color:var(--muted);font-size:16px;line-height:1;padding:2px 2px 2px 10px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;flex:none}
 
-  /* The widget's own lists: checklist, reminders, costs. */
+  /* Bookmarks: the saved lists, along the top. */
+  .bmbar{display:flex;gap:6px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none}
+  .bmbar::-webkit-scrollbar{display:none}
+  .bmbar .chip{flex:none}
+
+  /* The filter, Bench's pattern by way of Tally: one round button, a panel
+     that drops under it, chips for what is active. */
+  .fdrop{position:relative}
+  .fbtn{width:34px;height:26px;border-radius:999px;background:var(--bg2);border:1px solid var(--line);color:var(--txt);cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;font-size:13px;padding:0}
+  .fbtn.act{border-color:var(--accent);color:var(--accent2)}
+  .fscrim{position:fixed;inset:0;z-index:8}
+  .fmenu{position:absolute;right:0;top:100%;z-index:9;margin-top:6px;width:min(320px,88vw);display:flex;flex-direction:column;
+    background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:8px;box-shadow:0 8px 24px -8px rgba(0,0,0,.6);
+    text-align:left;font-weight:400;text-transform:none;letter-spacing:0}
+  .fsearch{position:relative;margin-bottom:6px}
+  .fsearch input{padding-right:30px}
+  .fsearch .fx{position:absolute;right:9px;top:50%;transform:translateY(-50%);color:var(--muted);cursor:pointer;font-size:16px}
+  .ovf-addf,.ovf-exclf{display:block;width:100%;text-align:left;background:none;border:none;font-size:13px;font-weight:600;padding:7px 9px;
+    border-radius:7px;cursor:pointer;font-family:inherit}
+  .ovf-addf{color:#4a9eff} .ovf-exclf{color:#ff5c6c}
+  .ovf-exclf:disabled{opacity:.4;cursor:default}
+  .fpick{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px;margin:2px 0 6px}
+  .fpick .grp{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;padding:7px 9px 2px}
+  .fpick button{display:flex;align-items:center;gap:7px;width:100%;text-align:left;background:none;border:none;color:var(--txt);font-size:12.5px;padding:6px 9px 6px 16px;cursor:pointer;font-family:inherit}
+  .fchips{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 6px}
+  .fchip{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:#fff;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:600}
+  .fchip.exc{background:#ff5c6c}
+  .fchip.plain{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
+  .fchip b{cursor:pointer;opacity:.75;font-weight:700}
+
+  /* The editor's own lists: checklist, reminders, costs. */
   .li{display:flex;align-items:center;gap:6px;margin-bottom:4px}
   .li input{padding:4px 8px;font-size:13px;min-width:0}
   .li input.d{flex:0 0 132px}
   .li input.a{flex:0 0 84px;text-align:right}
   .li .x{color:var(--muted);cursor:pointer;font-size:17px;line-height:1;padding:0 2px;flex:none}
   .li.done input.t{color:var(--muted);text-decoration:line-through}
-  .tot{display:flex;justify-content:flex-end;gap:12px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;padding:2px 26px 0 0}
+  /* ...and as they read on the task's page. */
+  .vli{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:13.5px}
+  .vli .t{flex:1;min-width:0;overflow-wrap:anywhere}
+  .vli.done .t{color:var(--muted);text-decoration:line-through}
+  .vli .v{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .vli .when{font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .vli .when.due{color:var(--warn)} .vli .when.late{color:var(--bad)}
+  .tot{display:flex;justify-content:flex-end;gap:12px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;padding:2px 0 0}
 </style>
 </head>
 <body>
@@ -158,18 +205,22 @@
   <div id="tabs"></div>
 </div>
 
-<script src="backend.js?v=1"></script>
+<script src="backend.js?v=2"></script>
 <script>
-const APP_VERSION="1";
+const APP_VERSION="2";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
    Everything this device remembers, in one localStorage key. */
 const KEY = 'slate-v1';
 function loadStore(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
-const store = Object.assign({ backend:{ url:'', token:'' }, backendVersion:null, tasks:[], dirty:[], syncedAt:null, shut:{ Done:true } }, loadStore());
+const store = Object.assign({ backend:{ url:'', token:'' }, backendVersion:null, tasks:[], bookmarks:[], dirty:[], syncedAt:null,
+  bm:'all', filter:null }, loadStore());
+/* v1 marked a waiting task by its id alone; now a key says which tab. */
+const migrateKey = (k) => /^[TB]:/.test(k) ? k : 'T:'+k;
+store.dirty = (store.dirty||[]).map(migrateKey);
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { /* private mode */ } };
-const state = { tab:'tasks', page:null, about:null, sync:null };
+const state = { tab:'tasks', view:null, edit:null, about:null, bmEdit:null, sync:null, fopen:false, fpick:null, statPick:false, listY:0 };
 
 /* ------------------------------------------------------------- the model --
    A task: a name, a status, the day it was made and the moment it last
@@ -177,15 +228,16 @@ const state = { tab:'tasks', page:null, about:null, sync:null };
    tags, assignees, a cost list in euros or dollars, a note, and whether it
    is one for this week. A deleted task keeps its row, Deleted filled, so a
    phone that still has it cannot bring it back. */
-const STATUSES = ['Backlog','Todo','In progress','Done'];
-/* The list shows what is moving first. */
-const SHOWN = ['In progress','Todo','Backlog','Done'];
-const nextStatus = (s) => STATUSES[(STATUSES.indexOf(s)+1) % STATUSES.length];
-const CURS = ['EUR','USD'];
+const STATUSES = ['Backlog','Todo','In progress','Blocked','Action needed','Done'];
+const STATUS_COLOR = { 'Backlog':'#000000', 'Todo':'#8a92a6', 'In progress':'#3b82f6', 'Blocked':'#f87171', 'Action needed':'#fbbf24', 'Done':'#4ade80' };
+const sdot = (s) => `<span class="sdot${s==='Backlog'?' ring':''}" style="background:${STATUS_COLOR[s]||'#8a92a6'}"></span>`;
 const SYM = { EUR:'€', USD:'$' };
 const NOW = () => new Date().toISOString();
-const TODAY = () => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
-const uid = () => 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const ymd = (d) => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const TODAY = () => ymd(new Date());
+/* Sunday of this week: a reminder up to it is due. */
+const weekEnd = () => { const d = new Date(); d.setDate(d.getDate() + (7 - (d.getDay() || 7))); return ymd(d); };
+const uid = (p) => (p||'t') + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const live = () => store.tasks.filter((t)=>!t.deleted);
 const blank = (status) => ({ id:'', name:'', status:status||'Todo', created:'', updated:'', doneOn:'', info:'',
   checklist:[], reminders:[], tags:[], assignees:[], costs:[], week:false, deleted:'' });
@@ -207,14 +259,76 @@ const same = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLow
 /* One colour per name, the same on every phone. */
 const PALETTE = ['#3b82f6','#4ade80','#fbbf24','#f87171','#a78bfa','#22d3ee','#fb923c','#f472b6'];
 const colorOf = (s) => { let h = 0; for (const c of String(s).toLowerCase()) h = (h*31 + c.charCodeAt(0)) >>> 0; return PALETTE[h % PALETTE.length]; };
+/* The status a task moves to, and the day it was done with it. */
+function setStatus(t, s){ if (s==='Done' && t.status!=='Done') t.doneOn = TODAY(); if (s!=='Done') t.doneOn = ''; t.status = s; }
+
+/* --------------------------------------------------------------- filters --
+   Bench's way: a search, then + filters (keep what has one of them) and −
+   filters (drop what has any), on the status, the tags and the assignees.
+   Within one kind any value will do; across kinds, all of them. Done tasks
+   stay out of a list unless its filter picks a status. */
+const KINDS = [['status','Status'], ['person','Assignee'], ['tag','Tag']];
+const KIND_LABEL = Object.fromEntries(KINDS);
+const NONE = '(none)';
+const blankFilter = () => ({ q:'', inc:[], exc:[] });
+const valuesOf = (t, kind) => kind==='status' ? [t.status] : kind==='tag' ? t.tags : t.assignees;
+function matches(t, f){
+  const q = String(f.q||'').toLowerCase().split(/\s+/).filter(Boolean);
+  if (q.length) { const hay = [t.name, t.info, t.tags.join(' '), t.assignees.join(' '), t.checklist.map((i)=>i.text).join(' ')].join(' ').toLowerCase();
+    if (!q.every((w)=>hay.includes(w))) return false; }
+  const has = (e) => { const v = valuesOf(t, e.kind); return e.name===NONE ? !v.length : v.some((x)=>same(x, e.name)); };
+  for (const [kind] of KINDS) { const inc = f.inc.filter((e)=>e.kind===kind); if (inc.length && !inc.some(has)) return false; }
+  if (f.exc.some(has)) return false;
+  if (t.status==='Done' && !f.inc.some((e)=>e.kind==='status')) return false;
+  return true;
+}
+const filterKey = (f) => JSON.stringify([String(f.q||'').trim(), f.inc.map((e)=>e.kind+':'+e.name).sort(), f.exc.map((e)=>e.kind+':'+e.name).sort()]);
+const filterOn = (f) => !!(String(f.q||'').trim() || f.inc.length || f.exc.length);
+const curFilter = () => store.filter || (store.filter = blankFilter());
+
+/* -------------------------------------------------------------- bookmarks --
+   A bookmark is a filter kept under a name, and the order its list is in:
+   every list has its own, dragged by hand. 'all' is the list with no
+   bookmark; its order is kept the same way. A task not yet in a list's
+   order shows at the top, newest first, until it is dragged. */
+const bmLive = () => store.bookmarks.filter((b)=>!b.deleted);
+const bmById = (id) => store.bookmarks.find((b)=>b.id===id && !b.deleted) || null;
+const activeBm = () => (store.bm && store.bm!=='all' && bmById(store.bm)) || null;
+const orderKey = () => activeBm() ? store.bm : 'all';
+function ensureOrder(id){
+  let b = store.bookmarks.find((x)=>x.id===id);
+  if (!b) { b = { id, name: id==='all' ? 'All' : '', filter:blankFilter(), order:[], updated:'', deleted:'' }; store.bookmarks.push(b); }
+  return b;
+}
+function shownTasks(){
+  const f = curFilter(), b = store.bookmarks.find((x)=>x.id===orderKey()), ord = (b && b.order) || [];
+  const pos = new Map(ord.map((id,i)=>[id,i]));
+  const ts = live().filter((t)=>matches(t, f));
+  const fresh = ts.filter((t)=>!pos.has(t.id)).sort((a,b)=>String(b.created).localeCompare(String(a.created)));
+  return fresh.concat(ts.filter((t)=>pos.has(t.id)).sort((a,b)=>pos.get(a.id)-pos.get(b.id)));
+}
+/* Move the task at `from` to `to` in the list as shown; the list's order
+   becomes what is shown, followed by what it held that is not showing. */
+function moveTask(from, to){
+  const seq = shownTasks().map((t)=>t.id);
+  if (from===to || from<0 || to<0 || from>=seq.length || to>=seq.length) return false;
+  const [x] = seq.splice(from, 1); seq.splice(to, 0, x);
+  const b = ensureOrder(orderKey());
+  const alive = new Set(live().map((t)=>t.id));
+  b.order = seq.concat(b.order.filter((id)=>!seq.includes(id) && alive.has(id)));
+  b.updated = NOW(); save();
+  return true;
+}
 
 /* ------------------------------------------------------- the sheet's rows --
-   One row per task in the Tasks tab. The lists sit in one cell each, one
-   line per item, written so they read well in the sheet and can be typed
-   there by hand:
+   Tasks: one row per task. The lists sit in one cell each, one line per
+   item, written so they read well in the sheet and can be typed by hand:
      Checklist   [x] buy paint          Reminders   [ ] 2026-11-12 call the plumber
-     Costs       45.90 EUR Paint        Tags, Assignees   comma-separated   */
+     Costs       45.90 EUR Paint        Tags, Assignees   comma-separated
+   Bookmarks: one row per saved list; the filter one line per part
+   (Search: paint / + Status: Todo / - Tag: garden), the order as task ids. */
 const TASK_HEADERS = ['Id','Name','Status','Created','Updated','Done on','Tags','Assignees','Checklist','Reminders','Costs','Info','This week','Deleted'];
+const BM_HEADERS = ['Id','Name','Filter','Order','Updated','Deleted'];
 const lines = (s) => String(s==null?'':s).split(/\r?\n/).map((x)=>x.trim()).filter(Boolean);
 const list = (s) => String(s==null?'':s).split(',').map((x)=>x.trim()).filter(Boolean);
 function taskRow(t){
@@ -239,121 +353,200 @@ function readTask(o){
     week:/^(yes|true|x|1)$/i.test(g('This week').trim()), deleted:g('Deleted'),
   };
 }
+const filterText = (f) => [String(f.q||'').trim() ? 'Search: '+String(f.q).trim() : null,
+  ...f.inc.map((e)=>'+ '+KIND_LABEL[e.kind]+': '+e.name), ...f.exc.map((e)=>'- '+KIND_LABEL[e.kind]+': '+e.name)].filter(Boolean).join('\n');
+function readFilter(s){
+  const f = blankFilter();
+  for (const l of lines(s)) {
+    let m = /^search:\s*(.*)$/i.exec(l); if (m) { f.q = m[1]; continue; }
+    m = /^([+\-−])\s*(status|assignee|tag)s?:\s*(.+)$/i.exec(l); if (!m) continue;
+    const kind = KINDS.find(([,lab])=>same(lab, m[2]))[0];
+    const name = kind==='status' ? (STATUSES.find((s)=>same(s, m[3])) || null) : m[3].trim();
+    if (name) (m[1]==='+' ? f.inc : f.exc).push({ kind, name });
+  }
+  return f;
+}
+const bmRow = (b) => [b.id, b.name, filterText(b.filter), b.order.join(', '), b.updated, b.deleted||''];
+const readBm = (o) => { const g = (k) => o[k]==null ? '' : String(o[k]);
+  return { id:g('Id'), name:g('Name') || (g('Id')==='all' ? 'All' : ''), filter:readFilter(g('Filter')), order:list(g('Order')), updated:g('Updated'), deleted:g('Deleted') }; };
 /* A tab as records: header names to cell values. */
 const records = (tab) => { const h = ((tab && tab.headers) || []).map((x)=>String(x).trim());
   return ((tab && tab.rows) || []).map((r)=>{ const o = {}; h.forEach((k,i)=>{ o[k] = r[i]; }); return o; }).filter((o)=>o.Id); };
-const tasksTab = (ids) => ({ name:'Tasks', headers:TASK_HEADERS, rows:store.tasks.filter((t)=>!ids || ids.includes(t.id)).map(taskRow) });
+const TABS = { T:{ name:'Tasks', headers:TASK_HEADERS, row:taskRow, read:readTask, key:'tasks' },
+               B:{ name:'Bookmarks', headers:BM_HEADERS, row:bmRow, read:readBm, key:'bookmarks' } };
 
 /* ------------------------------------------------------------------- sync --
-   Every edit marks its task; shortly after, the marked tasks go to the sheet,
-   which merges them in and answers with every task. What comes back replaces
-   what is here, except a task edited again while the answer was on its way.
-   The sheet is read again whenever the app comes back to the screen, so what
-   the rest of the family did shows. */
+   Every edit marks its record; shortly after, the marked records go to the
+   sheet, which merges them in and answers with every record. What comes back
+   replaces what is here, except a record edited again while the answer was
+   on its way. The sheet is read again whenever the app comes back to the
+   screen, so what the rest of the family did shows. */
 const connected = () => !!(store.backend.url && store.backend.token);
 let syncTimer = null, syncing = null, again = false;
-const markDirty = (id) => { if (!store.dirty.includes(id)) store.dirty.push(id); };
+const markDirty = (k) => { if (!store.dirty.includes(k)) store.dirty.push(k); };
+const recOf = (k) => store[TABS[k[0]].key].find((x)=>x.id===k.slice(2));
 function syncSoon(){ if (!connected()) return; clearTimeout(syncTimer); syncTimer = setTimeout(()=>syncNow(true), 600); }
 async function syncNow(quiet){
   if (!connected()) { state.sync = { msg:'Not connected.', bad:true }; render(); return; }
   if (syncing) { again = true; return syncing; }
   const sent = {};
-  for (const id of store.dirty) { const t = store.tasks.find((x)=>x.id===id); if (t) sent[id] = t.updated; }
-  const ids = Object.keys(sent);
+  for (const k of store.dirty) { const r = recOf(k); if (r) sent[k] = r.updated; }
+  const keys = Object.keys(sent);
+  const tabs = Object.keys(TABS).map((p)=>{ const T = TABS[p], ids = keys.filter((k)=>k[0]===p).map((k)=>k.slice(2));
+    return ids.length ? { name:T.name, headers:T.headers, rows:store[T.key].filter((x)=>ids.includes(x.id)).map(T.row) } : null; }).filter(Boolean);
   if (!quiet) { state.sync = { msg:'Syncing…' }; render(); }
   syncing = (async () => {
     try {
-      const j = await BK.sync(store.backend, ids.length ? [tasksTab(ids)] : []);
+      const j = await BK.sync(store.backend, tabs);
       /* what went up is no longer waiting - unless it changed again since */
-      store.dirty = store.dirty.filter((id)=>!(id in sent) || (store.tasks.find((x)=>x.id===id)||{}).updated !== sent[id]);
-      absorb(j.tabs || []);
+      store.dirty = store.dirty.filter((k)=>!(k in sent) || (recOf(k)||{}).updated !== sent[k]);
+      for (const p of Object.keys(TABS)) absorb(p, j.tabs || []);
       store.backendVersion = j.backend; store.syncedAt = NOW(); save();
-      state.sync = { msg:'Synced ' + new Date().toTimeString().slice(0,5) + (ids.length ? ' · ' + ids.length + ' sent' : '') };
+      state.sync = { msg:'Synced ' + new Date().toTimeString().slice(0,5) + (keys.length ? ' · ' + keys.length + ' sent' : '') };
     } catch (e) { state.sync = { msg:e.message, bad:true }; }
   })();
   await syncing; syncing = null;
   render();
   if (again) { again = false; if (store.dirty.length) return syncNow(true); }
 }
-/* The sheet's tasks over this device's: a task still waiting to go up stays
+/* The sheet's records over this device's: one still waiting to go up stays
    as it is here; one that is not in the sheet and not waiting was removed
    from the sheet by hand, and goes. */
-function absorb(tabs){
-  const tab = tabs.find((t)=>t.name==='Tasks');
+function absorb(p, tabs){
+  const T = TABS[p], tab = tabs.find((t)=>t.name===T.name);
   if (!tab) return;
-  const waiting = new Set(store.dirty);
-  const here = new Map(store.tasks.map((t)=>[t.id, t]));
+  const waiting = new Set(store.dirty.filter((k)=>k[0]===p).map((k)=>k.slice(2)));
+  const here = new Map(store[T.key].map((x)=>[x.id, x]));
   const out = [];
   for (const o of records(tab)) {
-    const r = readTask(o), l = here.get(r.id);
+    const r = T.read(o), l = here.get(r.id);
     out.push(l && waiting.has(l.id) && String(l.updated) > String(r.updated) ? l : r);
     here.delete(r.id);
   }
   for (const l of here.values()) if (waiting.has(l.id)) out.push(l);
-  store.tasks = out;
+  store[T.key] = out;
 }
 /* A change: keep it, show it, send it. */
-function commit(t){ markDirty(t.id); save(); render(); syncSoon(); }
+function commit(k, quiet){ markDirty(k); save(); if (!quiet) render(); syncSoon(); }
 
 /* ---------------------------------------------------------------- helpers --*/
 const esc = (s) => String(s==null?'':s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ICON_GEAR = '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>';
-const ICON_CHECK = '<path d="M4 12l5 5L20 6"/>';
-const ICON_BELL = '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>';
-const ICON_COST = '<path d="M12 2v20"/><path d="M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>';
-const ICON_INFO = '<path d="M4 6h16M4 12h16M4 18h10"/>';
 const bar = (p) => `<div class="bbar"><i class="${p.pct===100?'full':''}" style="width:${p.pct}%"></i></div>`;
 const capOf = (name, x) => `<span class="cap"><span class="dot" style="background:${colorOf(name)}"></span>${esc(name)}${x||''}</span>`;
 
-/* ------------------------------------------------------------------ tasks --*/
-function taskLine(t){
-  const p = progress(t), nr = nextReminder(t), tot = costTotals(t.costs);
-  const meta = [];
-  for (const a of t.assignees) meta.push(capOf(a));
-  for (const g of t.tags) meta.push(`<span class="cap">${esc(g)}</span>`);
-  if (p.n) meta.push(`<span class="m"><svg viewBox="0 0 24 24">${ICON_CHECK}</svg>${p.d}/${p.n}</span>`);
-  if (nr) meta.push(`<span class="m ${nr.date < TODAY() ? 'late' : nr.date <= weekEnd() ? 'due' : ''}"><svg viewBox="0 0 24 24">${ICON_BELL}</svg>${esc(dLabel(nr.date))}</span>`);
-  for (const c of Object.keys(tot)) meta.push(`<span class="m">${esc(money(tot[c], c))}</span>`);
-  if (t.info) meta.push(`<span class="m"><svg viewBox="0 0 24 24">${ICON_INFO}</svg></span>`);
+/* ------------------------------------------------------------- the list --*/
+function filterMenu(f){
+  const pickList = () => {
+    const group = (label, kind, names, dot) => names.length ? `<div class="grp">${label}</div>` + names.map((n)=>
+      `<button data-fadd="${state.fpick}|${kind}|${esc(n)}">${dot(n)}${esc(n)}</button>`).join('') : '';
+    return `<div class="fpick">${group('Status', 'status', STATUSES, sdot)}${group('Assignee', 'person', known('assignees').concat([NONE]), (n)=>n===NONE?'':`<span class="dot" style="background:${colorOf(n)}"></span>`)}${group('Tag', 'tag', known('tags').concat([NONE]), ()=>'')}</div>`;
+  };
   return `
-    <div class="trow${t.status==='Done'?' done':''}" data-topen="${esc(t.id)}">
-      <div class="tm"><div class="tn">${esc(t.name)}</div>
-        ${meta.length?`<div class="ts">${meta.join('')}</div>`:''}
-        ${p.n?bar(p):''}</div>
-      <button class="chip on sm" data-tstat="${esc(t.id)}|${esc(nextStatus(t.status))}">${esc(t.status)}</button>
-    </div>`;
+  <div class="fscrim" data-fopen="0"></div>
+  <div class="fmenu">
+    <div class="fsearch"><input id="fq" placeholder="Search…" value="${esc(f.q)}" autocapitalize="off"><span class="fx" data-fclear="q">×</span></div>
+    <button class="ovf-addf" data-fpick="inc">+ Filter</button>
+    <button class="ovf-exclf" data-fpick="exc">− Filter</button>
+    ${state.fpick ? pickList() : ''}
+    <button class="ovf-exclf" style="margin-top:4px;border-top:1px solid var(--line);border-radius:0 0 7px 7px" data-freset="1" ${filterOn(f)?'':'disabled'}>Clear filter</button>
+  </div>`;
 }
-/* Sunday of this week: a reminder up to it is due. */
-const weekEnd = () => { const d = new Date(); d.setDate(d.getDate() + (7 - (d.getDay() || 7))); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
-/* Newest first; Done by the day it was done. */
-const ordered = (status) => live().filter((t)=>t.status===status)
-  .sort((a,b)=> status==='Done' ? (String(b.doneOn).localeCompare(String(a.doneOn)) || String(b.updated).localeCompare(String(a.updated))) : String(b.created).localeCompare(String(a.created)));
+function filterChips(f){
+  const chips = [];
+  if (String(f.q||'').trim()) chips.push(['plain', 'q', '“'+esc(f.q.trim())+'”']);
+  const lab = (e) => (e.kind==='status' ? sdot(e.name) : e.kind==='person' && e.name!==NONE ? `<span class="dot" style="background:${colorOf(e.name)}"></span>` : '') + esc(e.name);
+  f.inc.forEach((e,i)=>chips.push(['', 'inc|'+i, lab(e)]));
+  f.exc.forEach((e,i)=>chips.push(['exc', 'exc|'+i, '− '+lab(e)]));
+  return chips.length ? `<div class="fchips">${chips.map(([cls,key,label])=>`<span class="fchip ${cls}">${label}<b data-funf="${key}">×</b></span>`).join('')}</div>` : '';
+}
 function screenTasks(){
-  return SHOWN.map((s)=>{ const ts = ordered(s), shut = !!store.shut[s];
-    return `
-    <div class="card${shut?' shut':''}">
-      <h2><span class="grp" data-grp="${esc(s)}"><span class="chev">▾</span>${esc(s)} <span class="n">${ts.length}</span></span>
-        <button class="gbtn" data-tnew="${esc(s)}" aria-label="New task in ${esc(s)}">+</button></h2>
-      ${shut ? '' : ts.map(taskLine).join('')}
-    </div>`; }).join('');
+  const f = curFilter(), b = activeBm(), ts = state.dragSeq || shownTasks();
+  const changed = b ? filterKey(f) !== filterKey(b.filter) : filterOn(f);
+  const bms = [{ id:'all', name:'All' }].concat(bmLive().filter((x)=>x.id!=='all'));
+  return `
+  <div class="bmbar">${bms.map((x)=>`<button class="chip sm${orderKey()===x.id?' on':''}" data-bm="${esc(x.id)}">${esc(x.name)}</button>`).join('')}
+    ${changed ? `<button class="chip sm add" data-bmnew="1">+ Bookmark</button>` : ''}
+    ${changed && b ? `<button class="chip sm add" data-bmupd="1">Update ${esc(b.name)}</button>` : ''}</div>
+  <div class="card">
+    <h2><span>${esc(b ? b.name : 'Tasks')}<span class="n">${ts.length}</span></span>
+      <span class="hbtns"><span class="fdrop"><button class="fbtn ${filterOn(f)?'act':''}" data-fopen="${state.fopen?0:1}">🔍</button>${state.fopen?filterMenu(f):''}</span>
+        <button class="gbtn" data-tnew="1" aria-label="New task">+</button></span></h2>
+    ${filterChips(f)}
+    <div class="tlist">${ts.map((t,i)=>`
+      <div class="trow${t.status==='Done'?' done':''}${state.dragIdx===i?' lift':''}" data-topen="${esc(t.id)}" data-trow="${i}">${sdot(t.status)}<span class="tn">${esc(t.name)}</span><span class="drag" data-tdrag="${i}">⠿</span></div>`).join('')
+      || `<div class="empty">${live().length ? 'Nothing here.' : 'No tasks yet.'}</div>`}</div>
+  </div>`;
 }
 
-/* ---------------------------------------------------------- the widget ----
-   One for a new task and an existing one. Everything typed goes straight
-   into the draft; Save writes it, Close drops it (red "Close?" first when
-   there is something to lose). */
-const clone = (t) => JSON.parse(JSON.stringify(t));
-const draftKey = (d) => JSON.stringify([d.name, d.status, d.info, d.week, d.tags, d.assignees, d.checklist, d.reminders,
-  d.costs.map((c)=>[c.name, String(c.amount), c.cur]), d.tagIn, d.asgIn, d.ckIn]);
-function openTask(id, status){
-  const t = id ? store.tasks.find((x)=>x.id===id) : null;
-  const d = Object.assign(clone(t || blank(status)), { tagIn:'', asgIn:'', ckIn:'' });
-  state.page = { d, was:draftKey(d), fresh:true, closeArm:false, delArm:false, msg:null, focus:null };
-  render(); state.page.fresh = false;
+/* --------------------------------------------------------- the task page --
+   What a task is, as it reads. The checklist ticks here and the status
+   changes here; everything else is the editor's (✏️). */
+function screenTask(){
+  const t = store.tasks.find((x)=>x.id===state.view);
+  if (!t || t.deleted) { state.view = null; return screenTasks(); }
+  const p = progress(t), tot = costTotals(t.costs), td = TODAY(), we = weekEnd();
+  const rems = t.reminders.slice().sort((a,b)=>a.done-b.done || (a.date<b.date?-1:1));
+  return `
+  <div class="page">
+    <div class="ptitle"><h2>${esc(t.name)}</h2><button class="gbtn" data-tedit="${esc(t.id)}" aria-label="Edit">✏️</button></div>
+    <button class="chip sm" data-vstat="1">${sdot(t.status)}${esc(t.status)}</button>
+    ${state.statPick ? `<div class="spick">${STATUSES.filter((s)=>s!==t.status).map((s)=>`<button class="chip sm" data-vset="${esc(s)}">${sdot(s)}${esc(s)}</button>`).join('')}</div>` : ''}
+    ${t.assignees.length ? `<div class="sec">Assignees</div><div class="caps">${t.assignees.map((a)=>capOf(a)).join('')}</div>` : ''}
+    ${t.tags.length ? `<div class="sec">Tags</div><div class="caps">${t.tags.map((g)=>`<span class="cap">${esc(g)}</span>`).join('')}</div>` : ''}
+    ${t.info ? `<div class="sec">Infos</div><div class="info">${esc(t.info)}</div>` : ''}
+    ${p.n ? `<div class="sec"><span>Checklist</span><span>${p.d}/${p.n}</span></div>${bar(p)}
+      ${t.checklist.map((it,i)=>`<div class="vli${it.done?' done':''}"><span class="ck${it.done?' on':''}" data-vck="${i}">${it.done?'✓':''}</span><span class="t">${esc(it.text)}</span></div>`).join('')}` : ''}
+    ${rems.length ? `<div class="sec">Reminders</div>${rems.map((r)=>`<div class="vli${r.done?' done':''}"><span class="when ${r.done?'':r.date<td?'late':r.date<=we?'due':''}">${esc(dLabel(r.date))}</span><span class="t">${esc(r.text)}</span></div>`).join('')}` : ''}
+    ${t.costs.length ? `<div class="sec">Costs</div>${t.costs.map((c)=>`<div class="vli"><span class="t">${esc(c.name)}</span><span class="v">${num(c.amount)!=null?esc(money(num(c.amount), c.cur)):''}</span></div>`).join('')}
+      <div class="tot">${Object.keys(tot).map((c)=>`<span>${esc(money(tot[c], c))}</span>`).join('')}</div>` : ''}
+    ${t.week ? `<div class="sec">This week</div>` : ''}
+    <div class="stamp">Created ${esc(dLabel(t.created))} · Updated ${esc(dLabel(t.updated))}${t.doneOn?' · Done '+esc(dLabel(t.doneOn)):''}</div>
+    <div class="closebar"><button class="btn close" data-vclose="1">Close</button></div>
+  </div>`;
 }
-const isDirty = () => state.page && draftKey(state.page.d) !== state.page.was;
+
+/* ------------------------------------------------------- the task editor --
+   Like Bench's: no Save. Everything typed is kept as it is typed; Close
+   leaves. A new task comes into being with its first letter of name. */
+const clone = (t) => JSON.parse(JSON.stringify(t));
+function openEditor(id){
+  const t = id ? store.tasks.find((x)=>x.id===id) : null;
+  let d;
+  if (t) d = clone(t);
+  else { d = blank('Todo');
+    /* a new task in a filtered list starts with what the list asks for */
+    const f = curFilter(), st = f.inc.filter((e)=>e.kind==='status');
+    if (st.length===1) d.status = st[0].name;
+    for (const e of f.inc) if (e.name!==NONE) { if (e.kind==='tag') d.tags.push(e.name); if (e.kind==='person') d.assignees.push(e.name); } }
+  state.edit = { id: t ? t.id : null, d:Object.assign(d, { tagIn:'', asgIn:'', ckIn:'' }), delArm:false, focus: t ? null : 'tName' };
+  state.view = null; state.statPick = false;
+  render();
+}
+/* The draft as it is stored: no empty lines, amounts as numbers. */
+function cleaned(d){
+  return {
+    name:d.name.trim(), info:d.info, week:d.week, tags:d.tags.slice(), assignees:d.assignees.slice(),
+    checklist:d.checklist.map((i)=>({ done:i.done, text:i.text.trim() })).filter((i)=>i.text),
+    reminders:d.reminders.map((r)=>({ done:r.done, date:r.date, text:r.text.trim() })).filter((r)=>r.date),
+    costs:d.costs.map((c)=>{ const v = num(c.amount); return { name:c.name.trim(), amount: v==null ? '' : r2(v), cur:c.cur }; }).filter((c)=>c.name || c.amount!==''),
+  };
+}
+/* Keep the draft: into the task (made now if it is new and has a name). */
+function keepDraft(quiet){
+  const e = state.edit; if (!e) return;
+  const d = e.d, c = cleaned(d);
+  let t = e.id ? store.tasks.find((x)=>x.id===e.id) : null;
+  if (!t) { if (!c.name) return; t = Object.assign(blank(), { id:uid(), created:NOW() }); t.status = ''; store.tasks.push(t); e.id = t.id; }
+  if (!c.name) c.name = t.name;            // an emptied name keeps the one it had
+  const before = JSON.stringify(taskRow(t));
+  Object.assign(t, c); setStatus(t, d.status);
+  if (JSON.stringify(taskRow(t)) === before) return;
+  t.updated = NOW();
+  commit('T:'+t.id, quiet);
+}
 function boxField(label, field, inId, xAttr, addAttr){
-  const d = state.page.d, have = d[field];
+  const d = state.edit.d, have = d[field];
   const sugg = known(field).filter((k)=>!have.some((h)=>same(h, k))).slice(0, 10);
   return `
     <div class="field"><label>${label}</label>
@@ -363,76 +556,60 @@ function boxField(label, field, inId, xAttr, addAttr){
       ${sugg.length?`<div class="sugg">${sugg.map((k)=>`<button class="chip sm add" data-${addAttr}="${esc(k)}">+ ${esc(k)}</button>`).join('')}</div>`:''}
     </div>`;
 }
-function taskSheet(){
-  const p = state.page, d = p.d, pr = progress(d), tot = costTotals(d.costs);
+function screenEdit(){
+  const e = state.edit, d = e.d, pr = progress(d), tot = costTotals(d.costs);
   return `
-  <div class="sheetwrap">
-    <div class="scrim" data-tclose="1"></div>
-    <div class="sheet${p.fresh?' enter':''}">
-      <div class="shead"><h3>${d.id?'Task':'New task'}</h3>
-        <button class="chip on sm" data-pstat="${esc(nextStatus(d.status))}">${esc(d.status)}</button></div>
-      <div class="field"><label>Name</label><input id="tName" value="${esc(d.name)}"></div>
-      ${boxField('Tags', 'tags', 'tTagIn', 'ptagx', 'ptagadd')}
-      ${boxField('Assignees', 'assignees', 'tAsgIn', 'pasgx', 'pasgadd')}
-      <div class="field"><div class="lab"><span>Checklist${pr.n?' · '+pr.d+'/'+pr.n:''}</span></div>
-        ${pr.n?`<div style="margin:0 0 6px">${bar(pr)}</div>`:''}
-        ${d.checklist.map((it,i)=>`
-        <div class="li${it.done?' done':''}"><span class="ck${it.done?' on':''}" data-pckt="${i}">${it.done?'✓':''}</span>
-          <input class="t" id="tCk${i}" value="${esc(it.text)}"><span class="x" data-pckx="${i}">×</span></div>`).join('')}
-        <div class="li"><span class="ck" style="opacity:.35"></span><input id="tCkIn" value="${esc(d.ckIn)}" placeholder="Add an item" enterkeyhint="done"></div>
-      </div>
-      <div class="field"><div class="lab"><span>Reminders</span><button class="gbtn" data-prmadd="1">+</button></div>
-        ${d.reminders.map((r,i)=>`
-        <div class="li${r.done?' done':''}"><span class="ck${r.done?' on':''}" data-prmt="${i}">${r.done?'✓':''}</span>
-          <input class="d" type="date" id="tRmD${i}" value="${esc(r.date)}"><input class="t" id="tRmT${i}" value="${esc(r.text)}"><span class="x" data-prmx="${i}">×</span></div>`).join('')}
-      </div>
-      <div class="field"><div class="lab"><span>Costs</span><button class="gbtn" data-pcoadd="1">+</button></div>
-        ${d.costs.map((c,i)=>`
-        <div class="li"><input class="t" id="tCoN${i}" value="${esc(c.name)}"><input class="a" id="tCoA${i}" value="${esc(c.amount)}" inputmode="decimal">
-          <button class="chip on sm" data-pcocur="${i}|${c.cur==='EUR'?'USD':'EUR'}">${SYM[c.cur]}</button><span class="x" data-pcox="${i}">×</span></div>`).join('')}
-        ${Object.keys(tot).length?`<div class="tot">${Object.keys(tot).map((c)=>`<span>${esc(money(tot[c], c))}</span>`).join('')}</div>`:''}
-      </div>
-      <div class="field"><label>Infos</label><textarea id="tInfo">${esc(d.info)}</textarea></div>
-      <div class="switch" data-pweek="1"><span class="track${d.week?' on':''}"></span><span>This week</span></div>
-      ${d.id?`<div class="stamp">Created ${esc(dLabel(d.created))} · Updated ${esc(dLabel(d.updated))}${d.doneOn?' · Done '+esc(dLabel(d.doneOn)):''}</div>`:''}
-      ${p.msg?`<div class="status bad">${esc(p.msg)}</div>`:''}
-      <div class="foot">
-        ${d.id?`<button class="btn danger${p.delArm?' arm':''}" data-pdel="1">${p.delArm?'Delete?':'Delete'}</button>`:''}
-        <button class="btn close${p.closeArm?' arm':''}" data-tclose="1">${p.closeArm?'Close?':'Close'}</button>
-        <button class="btn primary" data-psave="1">Save</button>
-      </div>
+  <div class="page">
+    <div class="ptitle"><h2>${e.id?'Edit task':'New task'}</h2></div>
+    <div class="field"><label>Name</label><input id="tName" value="${esc(d.name)}"></div>
+    <div class="field"><label>Status</label><div class="chips">${STATUSES.map((s)=>`<button class="chip sm${d.status===s?' on':''}" data-pstat="${esc(s)}">${sdot(s)}${esc(s)}</button>`).join('')}</div></div>
+    ${boxField('Assignees', 'assignees', 'tAsgIn', 'pasgx', 'pasgadd')}
+    ${boxField('Tags', 'tags', 'tTagIn', 'ptagx', 'ptagadd')}
+    <div class="field"><label>Infos</label><textarea id="tInfo">${esc(d.info)}</textarea></div>
+    <div class="field"><div class="lab"><span>Checklist${pr.n?' · '+pr.d+'/'+pr.n:''}</span></div>
+      ${pr.n?bar(pr):''}
+      ${d.checklist.map((it,i)=>`
+      <div class="li${it.done?' done':''}"><span class="ck${it.done?' on':''}" data-pckt="${i}">${it.done?'✓':''}</span>
+        <input class="t" id="tCk${i}" value="${esc(it.text)}"><span class="x" data-pckx="${i}">×</span></div>`).join('')}
+      <div class="li"><span class="ck" style="opacity:.35"></span><input id="tCkIn" value="${esc(d.ckIn)}" placeholder="Add an item" enterkeyhint="done"></div>
+    </div>
+    <div class="field"><div class="lab"><span>Reminders</span><button class="gbtn" data-prmadd="1">+</button></div>
+      ${d.reminders.map((r,i)=>`
+      <div class="li${r.done?' done':''}"><span class="ck${r.done?' on':''}" data-prmt="${i}">${r.done?'✓':''}</span>
+        <input class="d" type="date" id="tRmD${i}" value="${esc(r.date)}"><input class="t" id="tRmT${i}" value="${esc(r.text)}"><span class="x" data-prmx="${i}">×</span></div>`).join('')}
+    </div>
+    <div class="field"><div class="lab"><span>Costs</span><button class="gbtn" data-pcoadd="1">+</button></div>
+      ${d.costs.map((c,i)=>`
+      <div class="li"><input class="t" id="tCoN${i}" value="${esc(c.name)}"><input class="a" id="tCoA${i}" value="${esc(c.amount)}" inputmode="decimal">
+        <button class="chip on sm" data-pcocur="${i}|${c.cur==='EUR'?'USD':'EUR'}">${SYM[c.cur]}</button><span class="x" data-pcox="${i}">×</span></div>`).join('')}
+      ${Object.keys(tot).length?`<div class="tot" style="padding-right:26px">${Object.keys(tot).map((c)=>`<span>${esc(money(tot[c], c))}</span>`).join('')}</div>`:''}
+    </div>
+    <div class="switch" data-pweek="1"><span class="track${d.week?' on':''}"></span><span>This week</span></div>
+    <div class="closebar">
+      ${e.id?`<button class="btn danger${e.delArm?' arm':''}" data-pdel="1">${e.delArm?'Delete?':'Delete'}</button>`:''}
+      <button class="btn close" data-eclose="1">Close</button>
     </div>
   </div>`;
 }
-/* What is half-typed when Save is pressed still counts. */
-function settle(d){
-  const add = (field, inKey) => { for (const x of list(d[inKey])) if (!d[field].some((h)=>same(h, x))) d[field].push(x); d[inKey] = ''; };
-  add('tags', 'tagIn'); add('assignees', 'asgIn');
-  if (d.ckIn.trim()) d.checklist.push({ done:false, text:d.ckIn.trim() }); d.ckIn = '';
-  d.checklist = d.checklist.map((i)=>({ done:i.done, text:i.text.trim() })).filter((i)=>i.text);
-  d.reminders = d.reminders.map((r)=>({ done:r.done, date:r.date, text:r.text.trim() })).filter((r)=>r.date || r.text);
-  d.costs = d.costs.map((c)=>{ const v = num(c.amount);
-    return { name:c.name.trim(), amount: v==null ? '' : r2(v), cur:c.cur }; }).filter((c)=>c.name || c.amount!=='');
-}
-/* The status a task moves to, and the day it was done with it. */
-function setStatus(t, s){ if (s==='Done' && t.status!=='Done') t.doneOn = TODAY(); if (s!=='Done') t.doneOn = ''; t.status = s; }
-function saveTask(){
-  const p = state.page, d = p.d;
-  settle(d);
-  d.name = d.name.trim();
-  if (!d.name) { p.msg = 'A name first.'; p.closeArm = false; p.delArm = false; render(); return; }
-  if (d.reminders.some((r)=>!r.date)) { p.msg = 'A reminder needs a date.'; render(); return; }
-  const now = NOW();
-  let t = d.id ? store.tasks.find((x)=>x.id===d.id) : null;
-  const was = t ? t.status : null;
-  const { tagIn, asgIn, ckIn, ...clean } = d;
-  if (!t) { t = Object.assign(blank(), clean, { id:uid(), created:now }); store.tasks.push(t); }
-  else Object.assign(t, clean);
-  t.status = was || ''; setStatus(t, d.status);
-  if (was === 'Done' && d.status === 'Done') t.doneOn = t.doneOn || TODAY();
-  t.updated = now;
-  state.page = null;
-  commit(t);
+
+/* ---------------------------------------------------- a bookmark's widget --*/
+function bmSheet(){
+  const m = state.bmEdit, b = m.id ? bmById(m.id) : null;
+  return `
+  <div class="sheetwrap">
+    <div class="scrim" data-bmclose="1"></div>
+    <div class="sheet${m.fresh?' enter':''}">
+      <h3>${b?'Bookmark':'New bookmark'}</h3>
+      <div class="field"><label>Name</label><input id="bmName" value="${esc(m.name)}"></div>
+      ${filterChips(m.filter) || '<div class="muted" style="font-size:12px">Every task but the done ones.</div>'}
+      ${m.msg?`<div class="status bad">${esc(m.msg)}</div>`:''}
+      <div class="foot">
+        ${b?`<button class="btn danger${m.delArm?' arm':''}" data-bmdel="1">${m.delArm?'Delete?':'Delete'}</button>`:''}
+        <button class="btn close${m.closeArm?' arm':''}" data-bmclose="1">${m.closeArm?'Close?':'Close'}</button>
+        <button class="btn primary" data-bmsave="1">Save</button>
+      </div>
+    </div>
+  </div>`;
 }
 
 /* --------------------------------------------------------------- settings --*/
@@ -450,7 +627,7 @@ function screenSettings(){
       <button class="btn primary" data-bksync="1" ${connected()?'':'disabled'}>Sync</button>
     </div>
     ${st?`<div class="status ${st.bad?'bad':'ok'}">${esc(st.msg)}</div>`:''}
-    ${store.dirty.length?`<div class="status bad">${store.dirty.length} task${store.dirty.length===1?'':'s'} waiting</div>`:''}
+    ${store.dirty.length?`<div class="status bad">${store.dirty.length} waiting</div>`:''}
   </div>`;
 }
 
@@ -468,7 +645,7 @@ function aboutSheet(){
   <div class="sheetwrap">
     <div class="scrim" data-aboutclose="1"></div>
     <div class="sheet${state.about.fresh?' enter':''}">
-      <h3>Slate<span class="dot" style="color:var(--accent);background:none;width:auto;height:auto">.</span></h3>
+      <h3>Slate<span style="color:var(--accent)">.</span></h3>
       <div class="rows">
         <div class="row"><span class="k">App</span><span class="v">v${esc(APP_VERSION)}</span></div>
         <div class="row"><span class="k">Backend</span><span class="v">${store.backendVersion?'v'+esc(store.backendVersion):'—'}</span></div>
@@ -486,28 +663,30 @@ function aboutSheet(){
 }
 
 /* ----------------------------------------------------------------- render --
-   The page scrolls to the top only when the page changes; every other redraw
-   keeps its place - the content area holds its height while it is swapped. */
-const SCREENS = { tasks:screenTasks, settings:screenSettings };
-let lastTab = null;
+   A page (a task, its editor) opens at its top; closing it brings the list
+   back where it was. Every other redraw keeps its place. */
+let lastWhere = null;
+const where = () => state.tab + '|' + (state.view||'') + '|' + (state.edit ? 'e' : '');
 function render(){
-  const moved = state.tab !== lastTab; lastTab = state.tab;
+  const w = where(), moved = w !== lastWhere, wasList = lastWhere && lastWhere.startsWith('tasks||') && !lastWhere.endsWith('e');
+  if (moved && wasList && typeof window.scrollY === 'number') state.listY = window.scrollY;
+  lastWhere = w;
   document.getElementById('appTitle').innerHTML = `<span data-about="1">Slate<span class="dot">.</span></span>`;
   const sd = document.getElementById('syncDot');
-  if (sd) sd.innerHTML = connected() && store.dirty.length ? `<span class="syncdot${state.sync&&state.sync.bad?' bad':''}">${store.dirty.length} waiting</span>` : '';
+  if (sd) sd.innerHTML = connected() && store.dirty.length ? `<span class="syncdot">${store.dirty.length} waiting</span>` : '';
   document.getElementById('setBtn').innerHTML =
     `<button class="hdrbtn${state.tab==='settings'?' on':''}" data-tab="${state.tab==='settings'?'tasks':'settings'}" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24">${ICON_GEAR}</svg></button>`;
   const tabs = document.getElementById('tabs');
   if (!moved && tabs.offsetHeight) tabs.style.minHeight = tabs.offsetHeight + 'px';
-  /* a widget redrawn from inside keeps its own scroll too */
-  const old = typeof document.querySelector==='function' ? document.querySelector('.sheet') : null, keep = old ? old.scrollTop : 0;
-  tabs.innerHTML = `<div class="tab">${state.about?aboutSheet():''}${state.page?taskSheet():''}${SCREENS[state.tab]()}</div>`;
-  if (keep) { const nw = document.querySelector('.sheet'); if (nw) nw.scrollTop = keep; }
+  const body = state.tab==='settings' ? screenSettings() : state.edit ? screenEdit() : state.view ? screenTask() : screenTasks();
+  tabs.innerHTML = `<div class="tab">${state.about?aboutSheet():''}${state.bmEdit?bmSheet():''}${body}</div>`;
   wire();
-  if (moved && typeof scrollTo==='function') scrollTo({ top:0 });
+  if (moved && typeof scrollTo==='function') scrollTo({ top: w==='tasks||' ? state.listY||0 : 0 });
   if (typeof requestAnimationFrame === 'function') requestAnimationFrame(()=>{ tabs.style.minHeight=''; });
   else tabs.style.minHeight='';
-  if (state.page && state.page.focus) { const f = document.getElementById(state.page.focus); state.page.focus = null; if (f && f.focus) f.focus(); }
+  const fo = state.edit ? state.edit.focus : state.focus;
+  if (fo) { if (state.edit) state.edit.focus = null; state.focus = null;
+    const f = document.getElementById(fo); if (f && f.focus) { f.focus(); try { const n = String(f.value||'').length; if (f.setSelectionRange) f.setSelectionRange(n, n); } catch (e) {} } }
 }
 
 /* Throw away the service worker and every cache, then reload from the
@@ -520,48 +699,114 @@ async function hardReload(){
   location.reload();
 }
 
-const on = (attr, f) => document.querySelectorAll('[data-'+attr+']').forEach((el)=>el.onclick=(e)=>{ if (e && e.stopPropagation) e.stopPropagation(); return f(el.dataset[attr.replace(/-(.)/g,(m,c)=>c.toUpperCase())], el, e); });
+const on = (attr, f) => document.querySelectorAll('[data-'+attr+']').forEach((el)=>el.onclick=(e)=>{ if (e && e.stopPropagation) e.stopPropagation(); return f(el.dataset[attr], el, e); });
 function wire(){
   on('reload', hardReload);
   on('about', ()=>{ state.about={ fresh:true }; state.sync=null; render(); state.about.fresh=false; });
   on('aboutclose', ()=>{ state.about=null; render(); });
-  on('tab', (v)=>{ state.tab=v; state.page=null; state.about=null; render(); });
+  on('tab', (v)=>{ if (state.edit) keepDraft(true); state.tab=v; state.view=null; state.edit=null; state.about=null; state.fopen=false; render(); });
   on('install', async()=>{
     if (INSTALL_EVT) { INSTALL_EVT.prompt(); try { await INSTALL_EVT.userChoice; } catch (e) {} INSTALL_EVT=null; render(); return; }
     alert('Browser menu › Install app (or Add to Home Screen).'); });
 
-  /* the list */
-  on('grp', (s)=>{ store.shut[s] = !store.shut[s]; save(); render(); });
-  on('tnew', (s)=>openTask(null, s));
-  on('topen', (id)=>openTask(id));
-  on('tstat', (v)=>{ const i = v.lastIndexOf('|'), t = store.tasks.find((x)=>x.id===v.slice(0,i)); if (!t) return;
-    setStatus(t, v.slice(i+1)); t.updated = NOW(); commit(t); });
+  /* the list - unless a drag just happened, a row opens its page */
+  on('topen', (id)=>{ if (state.dragged) { state.dragged = false; return; } state.view = id; state.statPick = false; state.fopen = false; render(); });
+  on('tnew', ()=>{ state.fopen = false; openEditor(null); });
+  on('tdrag', ()=>{});
+  document.querySelectorAll('[data-tdrag]').forEach((el)=>{
+    el.onpointerdown = (e) => {
+      if (e && e.preventDefault) e.preventDefault(); if (e && e.stopPropagation) e.stopPropagation();
+      state.dragIdx = +el.dataset.tdrag; state.dragMoved = false; render();
+      const move = (ev) => {
+        let to = state.dragIdx;
+        document.querySelectorAll('[data-trow]').forEach((r)=>{ const b = r.getBoundingClientRect(); if (ev.clientY > b.top && ev.clientY < b.bottom) to = +r.dataset.trow; });
+        if (to!==state.dragIdx && moveTask(state.dragIdx, to)) { state.dragIdx = to; state.dragMoved = true; render(); }
+      };
+      const up = () => { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up);
+        const moved = state.dragMoved; state.dragIdx = null; state.dragMoved = false; state.dragged = moved;
+        if (moved) commit('B:'+orderKey()); else render();
+        setTimeout(()=>{ state.dragged = false; }, 0); };
+      document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+    }; });
 
-  /* the widget */
-  const p = state.page;
-  if (p) {
-    const d = p.d;
-    const calm = () => { p.closeArm = false; p.delArm = false; p.msg = null; };
-    const redraw = (focus) => { calm(); p.focus = focus || null; render(); };
-    const field = (id, set) => { const el = document.getElementById(id); if (el) el.oninput = () => { set(el.value); if (p.closeArm || p.delArm) redraw(); }; return el; };
+  /* the filter */
+  const F = curFilter();
+  on('fopen', (v)=>{ state.fopen = v==='1'; state.fpick = null; if (state.fopen) state.focus = 'fq'; render(); });
+  on('fpick', (v)=>{ state.fpick = state.fpick===v ? null : v; render(); });
+  on('fadd', (v)=>{ const [which, kind, ...rest] = v.split('|'), name = rest.join('|');
+    const other = which==='inc' ? 'exc' : 'inc';
+    F[other] = F[other].filter((e)=>!(e.kind===kind && same(e.name, name)));
+    if (!F[which].some((e)=>e.kind===kind && same(e.name, name))) F[which].push({ kind, name });
+    state.fpick = null; save(); render(); });
+  on('funf', (v)=>{ if (v==='q') F.q = ''; else { const [w, i] = v.split('|'); F[w].splice(+i, 1); } save(); render(); });
+  on('fclear', ()=>{ F.q = ''; state.focus = 'fq'; save(); render(); });
+  on('freset', ()=>{ store.filter = blankFilter(); state.fopen = false; save(); render(); });
+  const fq = document.getElementById('fq');
+  if (fq) fq.oninput = () => { F.q = fq.value; save(); state.focus = 'fq'; render(); };
+
+  /* bookmarks: a tap shows its list; a tap on the one showing opens it */
+  on('bm', (id)=>{
+    if (id===orderKey() && id!=='all') { const b = bmById(id); state.bmEdit = { id, name:b.name, filter:b.filter, fresh:true }; render(); state.bmEdit.fresh = false; return; }
+    store.bm = id; const b = bmById(id); store.filter = b && id!=='all' ? clone(b.filter) : blankFilter(); state.fopen = false; save(); render(); });
+  on('bmnew', ()=>{ state.bmEdit = { id:null, name:'', filter:clone(curFilter()), fresh:true }; state.focus = 'bmName'; render(); state.bmEdit.fresh = false; });
+  on('bmupd', ()=>{ const b = activeBm(); if (!b) return; b.filter = clone(curFilter()); b.updated = NOW(); commit('B:'+b.id); });
+  if (state.bmEdit) {
+    const m = state.bmEdit, n = document.getElementById('bmName');
+    if (n) n.oninput = () => { m.name = n.value; if (m.closeArm || m.delArm || m.msg) { m.closeArm = m.delArm = false; m.msg = null; render(); } };
+    on('bmclose', ()=>{ const b = m.id ? bmById(m.id) : null;
+      if (m.name.trim() !== (b ? b.name : '') && !m.closeArm) { m.closeArm = true; m.delArm = false; render(); return; }
+      state.bmEdit = null; render(); });
+    on('bmsave', ()=>{ const name = m.name.trim();
+      if (!name) { m.msg = 'A name first.'; render(); return; }
+      if (bmLive().some((x)=>x.id!==m.id && same(x.name, name))) { m.msg = 'There is one by that name.'; render(); return; }
+      let b = m.id ? bmById(m.id) : null;
+      if (!b) { b = { id:uid('b'), name, filter:clone(m.filter), order:[], updated:'', deleted:'' };
+        /* it starts in the order the list shows now */
+        b.order = shownTasks().map((t)=>t.id); store.bookmarks.push(b); store.bm = b.id; }
+      b.name = name; b.updated = NOW(); state.bmEdit = null; commit('B:'+b.id); });
+    on('bmdel', ()=>{ if (!m.delArm) { m.delArm = true; m.closeArm = false; render(); return; }
+      const b = bmById(m.id); state.bmEdit = null;
+      if (b) { b.deleted = NOW(); b.updated = b.deleted; if (store.bm===b.id) { store.bm = 'all'; store.filter = blankFilter(); } commit('B:'+b.id); } else render(); });
+  }
+
+  /* the task page */
+  const vt = state.view ? store.tasks.find((x)=>x.id===state.view) : null;
+  if (vt) {
+    on('vclose', ()=>{ state.view = null; state.statPick = false; render(); });
+    on('tedit', (id)=>openEditor(id));
+    on('vstat', ()=>{ state.statPick = !state.statPick; render(); });
+    on('vset', (s)=>{ setStatus(vt, s); vt.updated = NOW(); state.statPick = false; commit('T:'+vt.id); });
+    on('vck', (i)=>{ const it = vt.checklist[+i]; if (!it) return; it.done = !it.done; vt.updated = NOW(); commit('T:'+vt.id); });
+  }
+
+  /* the editor: every change kept at once */
+  const E = state.edit;
+  if (E) {
+    const d = E.d;
+    const redraw = (focus) => { E.delArm = false; keepDraft(true); E.focus = focus || null; render(); };
+    const field = (id, set) => { const el = document.getElementById(id);
+      if (el) el.oninput = () => { set(el.value); const had = !!E.id; keepDraft(true); if (E.delArm || had !== !!E.id) { E.delArm = false; E.focus = id; render(); } }; return el; };
     field('tName', (v)=>{ d.name = v; });
     field('tInfo', (v)=>{ d.info = v; });
     /* tags and assignees: Enter (or a comma) makes a capsule */
-    const box = (id, field_, inKey) => { const el = field(id, (v)=>{ d[inKey] = v; if (/,/.test(v)) { settleBox(field_, inKey); redraw(id); } });
-      if (el) el.onkeydown = (e) => {
+    const settleBox = (field_, inKey) => { for (const x of list(d[inKey])) if (!d[field_].some((h)=>same(h, x))) d[field_].push(x); d[inKey] = ''; };
+    const box = (id, field_, inKey) => { const el = document.getElementById(id); if (!el) return;
+      el.oninput = () => { d[inKey] = el.value; if (/,/.test(el.value)) { settleBox(field_, inKey); redraw(id); } };
+      el.onkeydown = (e) => {
         if (e.key==='Enter') { if (e.preventDefault) e.preventDefault(); settleBox(field_, inKey); redraw(id); }
         else if (e.key==='Backspace' && !el.value && d[field_].length) { d[field_].pop(); redraw(id); } }; };
-    const settleBox = (field_, inKey) => { for (const x of list(d[inKey])) if (!d[field_].some((h)=>same(h, x))) d[field_].push(x); d[inKey] = ''; };
     box('tTagIn', 'tags', 'tagIn'); box('tAsgIn', 'assignees', 'asgIn');
     on('ptagx', (i)=>{ d.tags.splice(+i, 1); redraw(); });
     on('pasgx', (i)=>{ d.assignees.splice(+i, 1); redraw(); });
     on('ptagadd', (k)=>{ if (!d.tags.some((h)=>same(h, k))) d.tags.push(k); redraw(); });
     on('pasgadd', (k)=>{ if (!d.assignees.some((h)=>same(h, k))) d.assignees.push(k); redraw(); });
+    on('pstat', (s)=>{ d.status = s; redraw(); });
     /* the checklist: Enter in the last line adds the item, ready for the next */
     d.checklist.forEach((it, i) => field('tCk'+i, (v)=>{ it.text = v; }));
-    const ck = field('tCkIn', (v)=>{ d.ckIn = v; });
-    if (ck) ck.onkeydown = (e) => { if (e.key!=='Enter') return; if (e.preventDefault) e.preventDefault();
-      const v = (d.ckIn||'').trim(); if (v) d.checklist.push({ done:false, text:v }); d.ckIn = ''; redraw('tCkIn'); };
+    const ck = document.getElementById('tCkIn');
+    if (ck) { ck.oninput = () => { d.ckIn = ck.value; };
+      ck.onkeydown = (e) => { if (e.key!=='Enter') return; if (e.preventDefault) e.preventDefault();
+        const v = (d.ckIn||'').trim(); if (v) d.checklist.push({ done:false, text:v }); d.ckIn = ''; redraw('tCkIn'); }; }
     on('pckt', (i)=>{ const it = d.checklist[+i]; if (it) it.done = !it.done; redraw(); });
     on('pckx', (i)=>{ d.checklist.splice(+i, 1); redraw(); });
     /* reminders */
@@ -575,12 +820,14 @@ function wire(){
     on('pcocur', (v)=>{ const [i, c] = v.split('|'); if (d.costs[+i]) d.costs[+i].cur = c; redraw(); });
     on('pcox', (i)=>{ d.costs.splice(+i, 1); redraw(); });
     on('pweek', ()=>{ d.week = !d.week; redraw(); });
-    on('pstat', (s)=>{ d.status = s; redraw(); });
-    on('psave', saveTask);
-    on('tclose', ()=>{ if (isDirty() && !p.closeArm) { p.closeArm = true; p.delArm = false; render(); return; } state.page = null; render(); });
-    on('pdel', ()=>{ if (!p.delArm) { p.delArm = true; p.closeArm = false; render(); return; }
-      const t = store.tasks.find((x)=>x.id===d.id); state.page = null;
-      if (t) { t.deleted = NOW(); t.updated = t.deleted; commit(t); } else render(); });
+    /* Close: what is half-typed counts; back to the task's page (or the
+       list, when nothing was ever named) */
+    on('eclose', ()=>{ settleBox('tags', 'tagIn'); settleBox('assignees', 'asgIn');
+      const v = (d.ckIn||'').trim(); if (v) d.checklist.push({ done:false, text:v }); d.ckIn = '';
+      keepDraft(true); state.view = E.id; state.edit = null; render(); });
+    on('pdel', ()=>{ if (!E.delArm) { E.delArm = true; render(); return; }
+      const t = store.tasks.find((x)=>x.id===E.id); state.edit = null; state.view = null;
+      if (t) { t.deleted = NOW(); t.updated = t.deleted; commit('T:'+t.id); } else render(); });
   }
 
   /* settings */
