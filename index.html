@@ -241,9 +241,9 @@
 </div>
 <nav id="nav"></nav>
 
-<script src="backend.js?v=8"></script>
+<script src="backend.js?v=9"></script>
 <script>
-const APP_VERSION="8";
+const APP_VERSION="9";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
@@ -444,14 +444,14 @@ function dueOf(t){
 }
 const blankFilter = () => ({ q:'', inc:[], exc:[] });
 const valuesOf = (t, kind) => kind==='status' ? [t.status] : kind==='tag' ? t.tags : kind==='due' ? dueOf(t) : t.assignees;
-function matches(t, f){
+function matches(t, f, doneOk){
   const q = String(f.q||'').toLowerCase().split(/\s+/).filter(Boolean);
   if (q.length) { const hay = [t.name, t.updates.map((u)=>u.text).join(' '), t.links.map((l)=>l.label+' '+l.url).join(' '), t.tags.join(' '), t.assignees.join(' '), t.steps.map((i)=>i.text).join(' ')].join(' ').toLowerCase();
     if (!q.every((w)=>hay.includes(w))) return false; }
   const has = (e) => { const v = valuesOf(t, e.kind); return e.name===NONE ? !v.length : v.some((x)=>same(x, e.name)); };
   for (const [kind] of KINDS) { const inc = f.inc.filter((e)=>e.kind===kind); if (inc.length && !inc.some(has)) return false; }
   if (f.exc.some(has)) return false;
-  if (t.status==='Done' && !f.inc.some((e)=>e.kind==='status')) return false;
+  if (t.status==='Done' && !doneOk && !f.inc.some((e)=>e.kind==='status')) return false;
   return true;
 }
 const filterKey = (f) => JSON.stringify([String(f.q||'').trim(), f.inc.map((e)=>e.kind+':'+e.name).sort(), f.exc.map((e)=>e.kind+':'+e.name).sort()]);
@@ -473,7 +473,20 @@ const isFixedTab = () => !!FIXED[state.tab];
 const isWeekTab = () => state.tab==='week' || state.tab==='nextweek';
 const isListTab = () => LIST_TABS.some(([k])=>k===state.tab);
 const WEEK_FILTER = { week:FIXED.week.filter, nextweek:FIXED.nextweek.filter };
-const curFilter = () => isFixedTab() ? FIXED[state.tab].filter : (store.filter || (store.filter = blankFilter()));
+/* The filter you set: on the Bookmarks tab the list's own; on a fixed tab one
+   of its own too, narrowing what the tab already holds (This week, and only
+   Adeline's). Each is kept on this phone, so it is there when the app opens. */
+const userFilter = () => {
+  if (!isFixedTab()) return store.filter || (store.filter = blankFilter());
+  const all = store.tabFilters || (store.tabFilters = {});
+  return all[state.tab] || (all[state.tab] = blankFilter());
+};
+const resetUserFilter = () => { if (isFixedTab()) store.tabFilters[state.tab] = blankFilter(); else store.filter = blankFilter(); };
+/* what the list shows: a fixed tab's own filter, and yours on top */
+const listMatches = (t) => { const u = userFilter();
+  return isFixedTab() ? matches(t, FIXED[state.tab].filter, u.inc.some((e)=>e.kind==='status')) && matches(t, u) : matches(t, u); };
+/* what a new task takes from the list it is made in: both filters' + values */
+const curFilter = () => isFixedTab() ? { q:'', inc:FIXED[state.tab].filter.inc.concat(userFilter().inc), exc:userFilter().exc } : userFilter();
 
 /* -------------------------------------------------------------- bookmarks --
    A bookmark is a filter kept under a name, how its list is sorted, and its
@@ -498,7 +511,7 @@ const sortOf = () => { const b = store.bookmarks.find((x)=>x.id===orderKey()); r
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity:'base', numeric:true });
 function shownTasks(){
   const f = curFilter(), b = store.bookmarks.find((x)=>x.id===orderKey()), ord = (b && b.order) || [], sort = sortOf();
-  const ts = live().filter((t)=>matches(t, f));
+  const ts = live().filter(listMatches);
   if (sort==='custom') {
     const pos = new Map(ord.map((id,i)=>[id,i]));
     const fresh = ts.filter((t)=>!pos.has(t.id)).sort((a,b)=>String(b.created).localeCompare(String(a.created)));
@@ -727,7 +740,7 @@ function filterChips(f){
 const BUILT_IN = ['all'].concat(FIXED_IDS);
 const bmShown = () => [{ id:'all', name:'All' }].concat(bmLive().filter((x)=>!BUILT_IN.includes(x.id)));
 function screenTasks(){
-  const f = curFilter(), b = activeBm(), ts = shownTasks(), sort = sortOf();
+  const f = userFilter(), b = activeBm(), ts = shownTasks(), sort = sortOf();
   const wk = isFixedTab(), changed = wk ? false : b ? filterKey(f) !== filterKey(b.filter) : filterOn(f);
   const nextSort = SORTS[(SORTS.findIndex(([k])=>k===sort)+1) % SORTS.length][0];
   const title = wk ? LIST_TABS.find(([k])=>k===state.tab)[1] : b ? b.name : 'Tasks';
@@ -738,9 +751,9 @@ function screenTasks(){
   <div class="card">
     <h2><span class="ttl">${esc(title)}<span class="n">${ts.length}</span>${b && !wk ? `<button class="bmedit" data-bmedit="${esc(b.id)}" aria-label="Rename or delete this bookmark">✏️</button>` : ''}</span>
       <span class="hbtns"><button class="chip on sm" data-bmsort="${nextSort}">${esc(SORT_LABEL[sort])}</button>
-        ${wk ? '' : `<span class="fdrop"><button class="fbtn ${filterOn(f)?'act':''}" data-fopen="${state.fopen?0:1}">🔍</button>${state.fopen?filterMenu(f):''}</span>`}
+        <span class="fdrop"><button class="fbtn ${filterOn(f)?'act':''}" data-fopen="${state.fopen?0:1}">🔍</button>${state.fopen?filterMenu(f):''}</span>
         <button class="gbtn" data-tnew="1" aria-label="New task">+</button></span></h2>
-    ${wk ? '' : filterChips(f)}
+    ${filterChips(f)}
     <div class="tlist">${ts.map((t,i)=>{ const nd = sort==='due' ? nextDue(t) : '';
       return `
       <div class="trow${t.status==='Done'?' done':''}${state.dragIdx===i?' lift':''}" data-topen="${esc(t.id)}" data-trow="${i}">${sdot(t.status)}<span class="tn">${esc(t.name)}</span>${
@@ -1063,7 +1076,7 @@ function wire(){
     }; });
 
   /* the filter */
-  const F = curFilter();
+  const F = userFilter();
   on('fopen', (v)=>{ state.fopen = v==='1'; state.fpick = null; if (state.fopen) state.focus = 'fq'; render(); });
   on('fpick', (v)=>{ state.fpick = state.fpick===v ? null : v; render(); });
   on('fadd', (v)=>{ const [which, kind, ...rest] = v.split('|'), name = rest.join('|');
@@ -1073,7 +1086,7 @@ function wire(){
     state.fpick = null; save(); render(); });
   on('funf', (v)=>{ if (v==='q') F.q = ''; else { const [w, i] = v.split('|'); F[w].splice(+i, 1); } save(); render(); });
   on('fclear', ()=>{ F.q = ''; state.focus = 'fq'; save(); render(); });
-  on('freset', ()=>{ store.filter = blankFilter(); state.fopen = false; save(); render(); });
+  on('freset', ()=>{ resetUserFilter(); state.fopen = false; save(); render(); });
   const fq = document.getElementById('fq');
   if (fq) fq.oninput = () => { F.q = fq.value; save(); state.focus = 'fq'; render(); };
 
