@@ -227,6 +227,16 @@
   .reppanel .rrow{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:12px}
   .reppanel .rrow>span:first-child{color:var(--muted);min-width:34px}
   .reppanel input{width:46px;flex:none;padding:3px 6px;text-align:center}
+  .sday{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;padding:10px 0 3px;border-bottom:1px solid var(--line)}
+  .sday:first-child{padding-top:2px}
+  .sday.late{color:var(--bad)}
+  .srow{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer}
+  .srow .ck{margin-top:1px}
+  .srow .st{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .srow .stx{font-size:14px;overflow-wrap:anywhere}
+  .srow .stk{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .srow .stk .sdot{width:8px;height:8px}
+  .srow .rp1{color:var(--accent2);font-size:12px}
   .upd{display:flex;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
   .upd .when{flex:0 0 46px;padding-top:2px}
   .upd .info{flex:1;min-width:0}
@@ -241,9 +251,9 @@
 </div>
 <nav id="nav"></nav>
 
-<script src="backend.js?v=11"></script>
+<script src="backend.js?v=12"></script>
 <script>
-const APP_VERSION="11";
+const APP_VERSION="12";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
@@ -464,7 +474,8 @@ const filterOn = (f) => !!(String(f.q||'').trim() || f.inc.length || f.exc.lengt
    how they sort and their order. */
 const FIXED = {
   week:    { label:'This week', filter:{ q:'', inc:[{ kind:'due', name:'This week' }], exc:[] }, sort:'due' },
-  nextweek:{ label:'Next week', filter:{ q:'', inc:[{ kind:'due', name:'Next week' }], exc:[] }, sort:'due' },
+  /* Coming up: not tasks but their steps - every one not done that has a date */
+  nextweek:{ label:'Coming up', filter:{ q:'', inc:[{ kind:'due', name:'This week' }, { kind:'due', name:'Next week' }, { kind:'due', name:'Later' }], exc:[] }, sort:'due', steps:true },
   home:    { label:'Home',      filter:{ q:'', inc:[{ kind:'tag', name:'home' }], exc:[] },      sort:'custom' },
   finance: { label:'Finance',   filter:{ q:'', inc:[{ kind:'tag', name:'finance' }], exc:[] },   sort:'custom' },
   admin:   { label:'Admin',     filter:{ q:'', inc:[{ kind:'tag', name:'admin' }], exc:[] },     sort:'custom' },
@@ -472,9 +483,10 @@ const FIXED = {
 const FIXED_IDS = Object.keys(FIXED);
 const LIST_TABS = FIXED_IDS.map((k)=>[k, FIXED[k].label]).concat([['lists', 'Bookmarks']]);
 const isFixedTab = () => !!FIXED[state.tab];
-const isWeekTab = () => state.tab==='week' || state.tab==='nextweek';
+const isWeekTab = () => state.tab==='week';
+const isStepsTab = () => !!(FIXED[state.tab] && FIXED[state.tab].steps);
 const isListTab = () => LIST_TABS.some(([k])=>k===state.tab);
-const WEEK_FILTER = { week:FIXED.week.filter, nextweek:FIXED.nextweek.filter };
+const WEEK_FILTER = { week:FIXED.week.filter };
 /* The filter you set: on the Bookmarks tab the list's own; on a fixed tab one
    of its own too, narrowing what the tab already holds (This week, and only
    Adeline's). Each is kept on this phone, so it is there when the app opens. */
@@ -558,6 +570,8 @@ for (const id of FIXED_IDS) {
   if (!b) { store.bookmarks.push(newBm(id, FIXED[id].label, JSON.parse(JSON.stringify(FIXED[id].filter)), FIXED[id].sort)); store.dirty.push('B:'+id); }
   /* they are tabs now: one deleted before comes back */
   else if (b.deleted) { b.deleted = ''; b.updated = new Date().toISOString(); store.dirty.push('B:'+id); }
+  /* Next week is Coming up since v12 */
+  else if (b.name !== FIXED[id].label) { b.name = FIXED[id].label; b.filter = JSON.parse(JSON.stringify(FIXED[id].filter)); b.updated = new Date().toISOString(); store.dirty.push('B:'+id); }
 }
 /* the bookmarks tab shows All or one of yours; the fixed lists have their own tabs */
 if (FIXED[store.bm]) store.bm = 'all';
@@ -809,7 +823,36 @@ function filterChips(f){
 /* the bookmarks along the top of the Bookmarks tab: All, then yours as made */
 const BUILT_IN = ['all'].concat(FIXED_IDS);
 const bmShown = () => [{ id:'all', name:'All' }].concat(bmLive().filter((x)=>!BUILT_IN.includes(x.id)));
+/* Coming up: every step not done with a date, in date order, under its day -
+   the late ones first, in red. A row is the step and its task; a tap opens
+   the task, a tap on the box ticks the step (a repeating one moves on). */
+const dayLabel = (d) => { const td = TODAY(), tm = ymd(new Date(Date.now() + 864e5));
+  return d === td ? 'Today' : d === tm ? 'Tomorrow' : WD[dOf(d).getDay()] + ' ' + dLabel(d); };
+function comingSteps(){
+  const out = [];
+  for (const t of live().filter(listMatches)) t.steps.forEach((st, i)=>{ if (!st.done && st.due) out.push({ t, i, st }); });
+  return out.sort((a,b)=>a.st.due.localeCompare(b.st.due) || byName(a.t, b.t) || a.i - b.i);
+}
+function screenSteps(){
+  const f = userFilter(), items = comingSteps(), td = TODAY();
+  let day = '';
+  const rows = items.map(({ t, i, st })=>{
+    const head = st.due !== day ? `<div class="sday${st.due < td ? ' late' : ''}">${esc(dayLabel(st.due))}</div>` : '';
+    day = st.due;
+    return head + `
+      <div class="srow" data-topen="${esc(t.id)}"><span class="ck" data-cuck="${esc(t.id)}|${i}"></span>
+        <span class="st"><span class="stx">${esc(st.text || '(no text)')}${st.repeat ? ' <span class="rp1">↻</span>' : ''}</span><span class="stk">${sdot(t.status)}${esc(t.name)}</span></span></div>`; }).join('');
+  return `
+  <div class="card">
+    <h2><span class="ttl">Coming up<span class="n">${items.length}</span></span>
+      <span class="hbtns"><span class="fdrop"><button class="fbtn ${filterOn(f)?'act':''}" data-fopen="${state.fopen?0:1}">🔍</button>${state.fopen?filterMenu(f):''}</span>
+        <button class="gbtn" data-tnew="1" aria-label="New task">+</button></span></h2>
+    ${filterChips(f)}
+    <div class="tlist">${rows || `<div class="empty">No step with a date.</div>`}</div>
+  </div>`;
+}
 function screenTasks(){
+  if (isStepsTab()) return screenSteps();
   const f = userFilter(), b = activeBm(), ts = shownTasks(), sort = sortOf();
   const wk = isFixedTab(), changed = wk ? false : b ? filterKey(f) !== filterKey(b.filter) : filterOn(f);
   const nextSort = SORTS[(SORTS.findIndex(([k])=>k===sort)+1) % SORTS.length][0];
@@ -884,9 +927,9 @@ function openEditor(id){
     const f = curFilter(), st = f.inc.filter((e)=>e.kind==='status');
     if (st.length===1) d.status = st[0].name;
     for (const e of f.inc) if (e.name!==NONE) { if (e.kind==='tag') d.tags.push(known('tags').find((k)=>same(k, e.name)) || e.name); if (e.kind==='person') d.assignees.push(e.name); }
-    /* made from This week / Next week: a first step due then, so it shows there */
+    /* made from This week / Coming up: a first step due today, so it shows there */
     if (state.tab==='week') d.steps.push({ done:false, text:'', due:TODAY(), repeat:null, last:'' });
-    if (state.tab==='nextweek') { const m = new Date(weekEnd()+'T12:00:00'); m.setDate(m.getDate()+1); d.steps.push({ done:false, text:'', due:ymd(m), repeat:null, last:'' }); } }
+    if (state.tab==='nextweek') d.steps.push({ done:false, text:'', due:TODAY(), repeat:null, last:'' }); }
   state.edit = { id: t ? t.id : null, d:Object.assign(d, { tagIn:'', asgIn:'', stIn:'', upIn:'', lkIn:'' }), delArm:false, rep:null, focus: t ? null : 'tName' };
   state.view = null; state.statPick = false;
   render();
@@ -1077,7 +1120,7 @@ function renderNav(){
   const td = TODAY();
   n.innerHTML = LIST_TABS.map(([k, label])=>{
     let cnt = '';
-    if (k==='week' || k==='nextweek') { const ts = live().filter((t)=>matches(t, WEEK_FILTER[k]));
+    if (k==='week') { const ts = live().filter((t)=>matches(t, WEEK_FILTER[k]));
       if (ts.length) cnt = `<span class="cnt${k==='week' && ts.some((t)=>nextDue(t) < td) ? ' late' : ''}">${ts.length}</span>`; }
     return `<button class="${state.tab===k?'active':''}" data-tab="${k}"><span class="ico"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${cnt}</span>${label}</button>`; }).join('');
 }
@@ -1128,6 +1171,8 @@ function wire(){
 
   /* the list - unless a drag just happened, a row opens its page */
   on('topen', (id)=>{ if (state.dragged) { state.dragged = false; return; } state.view = id; state.updDraft = ''; state.statPick = false; state.fopen = false; render(); });
+  on('cuck', (v)=>{ const k = v.lastIndexOf('|'), t = store.tasks.find((x)=>x.id===v.slice(0, k)), st = t && t.steps[+v.slice(k+1)];
+    if (!st) return; tickStep(st); t.updated = NOW(); commit('T:'+t.id); });
   on('tnew', ()=>{ state.fopen = false; openEditor(null); });
   on('tdrag', ()=>{});
   document.querySelectorAll('[data-tdrag]').forEach((el)=>{
