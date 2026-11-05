@@ -51,10 +51,12 @@
 
   const ping = (cfg) => call(cfg, 'ping');
   const pull = (cfg) => call(cfg, 'pull');
-  /* tabs: [{ name, headers, rows }] — only the records this phone changed.
+  /* tabs: [{ name, headers, rows, bases }] — only the records this phone changed,
+     each with the row as this phone last saw it.
      The script merges them into the sheet record by record (the later
      Updated wins) and answers with every tab, merged. */
-  const sync = (cfg, tabs) => call(cfg, 'sync', { tabs });
+  /* app: this copy's version - one older than the newest seen is refused */
+  const sync = (cfg, tabs, app) => call(cfg, 'sync', { tabs, app });
 
   return { call, ping, pull, sync };
 }));

@@ -241,9 +241,9 @@
 </div>
 <nav id="nav"></nav>
 
-<script src="backend.js?v=10"></script>
+<script src="backend.js?v=11"></script>
 <script>
-const APP_VERSION="10";
+const APP_VERSION="11";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
@@ -651,14 +651,21 @@ const TABS = { T:{ name:'Tasks', headers:taskHeaders, row:taskRow, read:readTask
 
 /* ------------------------------------------------------------------- sync --
    Every edit marks its record; shortly after, the marked records go to the
-   sheet, which merges them in and answers with every record. What comes back
-   replaces what is here, except a record edited again while the answer was
-   on its way. The sheet is read again whenever the app comes back to the
-   screen, so what the rest of the family did shows. */
+   sheet, each with the row as this phone last saw it there (its base). The
+   sheet takes a record whose row has not changed since; one changed in the
+   meantime (another phone, a hand edit) comes back as a conflict, and the
+   two are merged here (see mergeRec) and sent again. The answer is every
+   record, which replaces what is here - except a record still waiting to go
+   up, and a record the sheet does not have: that one is never dropped, it
+   goes back up (a sheet emptied by accident fills again from the phones).
+   The phone says which version of the app it is; one older than the newest
+   seen is refused, and asked to reload. The sheet is read again whenever the
+   app comes back to the screen, so what the rest of the family did shows. */
 const connected = () => !!(store.backend.url && store.backend.token);
 let syncTimer = null, syncing = null, again = false;
 const markDirty = (k) => { if (!store.dirty.includes(k)) store.dirty.push(k); };
 const recOf = (k) => store[TABS[k[0]].key].find((x)=>x.id===k.slice(2));
+if (!store.base || typeof store.base !== 'object') store.base = {};
 function syncSoon(){ if (!connected()) return; clearTimeout(syncTimer); syncTimer = setTimeout(()=>syncNow(true), 600); }
 async function syncNow(quiet){
   if (!connected()) { state.sync = { msg:'Not connected.', bad:true }; render(); return; }
@@ -667,45 +674,102 @@ async function syncNow(quiet){
   for (const k of store.dirty) { const r = recOf(k); if (r) sent[k] = r.updated; }
   const keys = Object.keys(sent);
   const tabs = Object.keys(TABS).map((p)=>{ const T = TABS[p], ids = keys.filter((k)=>k[0]===p).map((k)=>k.slice(2));
-    return ids.length ? { name:T.name, headers:T.headers(), rows:store[T.key].filter((x)=>ids.includes(x.id)).map(T.row) } : null; }).filter(Boolean);
+    if (!ids.length) return null;
+    const recs = store[T.key].filter((x)=>ids.includes(x.id));
+    return { name:T.name, headers:T.headers(), rows:recs.map(T.row), bases:recs.map((x)=>store.base[p+':'+x.id] || null) }; }).filter(Boolean);
   if (!quiet) { state.sync = { msg:'Syncing…' }; render(); }
   syncing = (async () => {
     try {
-      const j = await BK.sync(store.backend, tabs);
-      /* what went up is no longer waiting - unless it changed again since */
-      store.dirty = store.dirty.filter((k)=>!(k in sent) || (recOf(k)||{}).updated !== sent[k]);
-      for (const p of Object.keys(TABS)) absorb(p, j.tabs || []);
-      store.backendVersion = j.backend; store.syncedAt = NOW(); save();
-      state.sync = { msg:'Synced ' + new Date().toTimeString().slice(0,5) + (keys.length ? ' · ' + keys.length + ' sent' : '') };
-    } catch (e) { state.sync = { msg:e.message, bad:true }; }
+      const j = await BK.sync(store.backend, tabs, Number(APP_VERSION));
+      const conflicted = new Set();
+      for (const p of Object.keys(TABS)) for (const id of ((j.conflicts||{})[TABS[p].name]||[])) conflicted.add(p+':'+id);
+      /* what went up and was taken is no longer waiting - unless it changed again since */
+      store.dirty = store.dirty.filter((k)=>!(k in sent) || conflicted.has(k) || (recOf(k)||{}).updated !== sent[k]);
+      for (const p of Object.keys(TABS)) absorb(p, j.tabs || [], conflicted);
+      store.backendVersion = j.backend; store.syncedAt = NOW(); store.stale = false; save();
+      state.sync = { msg:'Synced ' + new Date().toTimeString().slice(0,5) + (keys.length ? ' · ' + (keys.length - conflicted.size) + ' sent' : '')
+        + (conflicted.size ? ' · ' + conflicted.size + ' merged with another phone' : '') };
+    } catch (e) {
+      /* a newer version has synced: this copy writes nothing until it reloads */
+      if (/ is out /.test(e.message)) store.stale = true;
+      state.sync = { msg:e.message, bad:true };
+    }
   })();
   await syncing; syncing = null;
   render();
   if (again) { again = false; if (store.dirty.length) return syncNow(true); }
 }
-/* The sheet's records over this device's: one still waiting to go up stays
-   as it is here; one that is not in the sheet and not waiting was removed
-   from the sheet by hand, and goes. */
-function absorb(p, tabs){
+function absorb(p, tabs, conflicted){
   const T = TABS[p], tab = tabs.find((t)=>t.name===T.name);
-  if (!tab) return;
+  conflicted = conflicted || new Set();
+  /* no such tab in the sheet: everything here goes up to make it again */
+  if (!tab) {
+    if (store[T.key].length) { for (const x of store[T.key]) { markDirty(p+':'+x.id); delete store.base[p+':'+x.id]; } syncSoon(); }
+    return;
+  }
   /* the older columns the sheet still has: written back empty, and a row
      that still holds something in them goes up again, moved over */
   if (p==='T') store.legacyCols = LEGACY.filter((k)=>(tab.headers||[]).map((h)=>String(h).trim()).includes(k));
-  let moved = 0;
+  let more = 0;
   const waiting = new Set(store.dirty.filter((k)=>k[0]===p).map((k)=>k.slice(2)));
   const here = new Map(store[T.key].map((x)=>[x.id, x]));
   const out = [];
   for (const o of records(tab)) {
-    const r = T.read(o), l = here.get(r.id);
-    if (p==='T' && hasLegacy(o) && !waiting.has(r.id)) { markDirty('T:'+r.id); moved++; }
-    out.push(l && waiting.has(l.id) && String(l.updated) > String(r.updated) ? l : r);
+    const r = T.read(o), l = here.get(r.id), key = p+':'+r.id;
+    if (l && waiting.has(r.id)) {
+      /* changed here and in the sheet: both kept, the result goes up again */
+      if (conflicted.has(key)) { out.push(mergeRec(p, store.base[key] || {}, l, o)); more++; }
+      else out.push(l);
+    } else {
+      out.push(r);
+      if (p==='T' && hasLegacy(o)) { markDirty(key); more++; }
+    }
+    store.base[key] = o;
     here.delete(r.id);
   }
-  for (const l of here.values()) if (waiting.has(l.id)) out.push(l);
+  /* not in the sheet: never dropped here - back up it goes */
+  for (const l of here.values()) { out.push(l); markDirty(p+':'+l.id); delete store.base[p+':'+l.id]; more++; }
   store[T.key] = out;
-  if (moved) syncSoon();
+  if (more) syncSoon();
 }
+
+/* -------------------------------------------------------------- merging --
+   Three rows: the base (the sheet's row when this phone last saw it), mine
+   (this phone's now) and theirs (the sheet's now). Column by column: what
+   only one side changed, that side's; what both changed, merged where it is
+   a list - the updates of both, the steps, links, costs, tags and assignees
+   added on either, without what either removed - else mine. */
+const cellOf = (x) => x==null ? '' : String(x);
+function lines3(b, m, t, split, join){
+  const B = split(b), M = split(m), T = split(t);
+  const gone = B.filter((x)=>!T.includes(x));              /* removed over there */
+  return join(M.filter((x)=>!gone.includes(x)).concat(T.filter((x)=>!B.includes(x) && !M.includes(x))));
+}
+const byLine = (b, m, t) => lines3(b, m, t, lines, (a)=>a.join('\n'));
+const byComma = (b, m, t) => lines3(b, m, t, list, (a)=>a.join(', '));
+/* steps: by line, then one step a text - this phone's when both have it */
+const bySteps = (b, m, t) => { const seen = new Set();
+  return byLine(b, m, t).split('\n').filter((l)=>{ if (!l) return false; const s = readSteps(l)[0]; const k = s ? s.text.trim().toLowerCase() : l;
+    if (seen.has(k)) return false; seen.add(k); return true; }).join('\n'); };
+/* updates: whole entries (one may run over several lines), newest first */
+const byUpdates = (b, m, t) => {
+  const ent = (c) => readUpdates(c).map((u)=>(u.date ? u.date + ': ' : '') + u.text);
+  const out = lines3(b, m, t, ent, (a)=>a);
+  const date = (e) => (/^(\d{4}-\d{2}-\d{2}):/.exec(e)||[])[1] || '';
+  return out.map((e,i)=>[e,i]).sort((x,y)=>date(y[0]).localeCompare(date(x[0])) || x[1]-y[1]).map((x)=>x[0]).join('\n');
+};
+const MERGE = { T:{ 'Next steps':bySteps, 'Updates':byUpdates, 'Links':byLine, 'Costs':byLine, 'Tags':byComma, 'Assignees':byComma }, B:{} };
+function mergeRec(p, base, mine, theirs){
+  const T = TABS[p], heads = T.headers(), row = T.row(mine), out = {};
+  heads.forEach((h, i)=>{
+    const b = cellOf(base[h]), m = cellOf(row[i]), t = cellOf(theirs[h]);
+    out[h] = m===b ? t : t===b ? m : MERGE[p][h] ? MERGE[p][h](b, m, t) : m;
+  });
+  const rec = T.read(out);
+  rec.updated = NOW();
+  return rec;
+}
+
 /* A change: keep it, show it, send it. */
 function commit(k, quiet){ markDirty(k); save(); if (!quiet) render(); syncSoon(); }
 
@@ -1024,7 +1088,8 @@ function render(){
   lastWhere = w;
   document.getElementById('appTitle').innerHTML = `<span data-about="1">Slate<span class="dot">.</span></span>`;
   const sd = document.getElementById('syncDot');
-  if (sd) sd.innerHTML = connected() && store.dirty.length ? `<span class="syncdot">${store.dirty.length} waiting</span>` : '';
+  /* a newer version has synced: this one asks to be reloaded before it writes */
+  if (sd) sd.innerHTML = connected() && store.stale ? `<button class="chip sm on" data-reload="1" style="background:var(--bad);border-color:var(--bad)">Reload</button>` : connected() && store.dirty.length ? `<span class="syncdot">${store.dirty.length} waiting</span>` : '';
   document.getElementById('setBtn').innerHTML =
     `<button class="hdrbtn${state.tab==='settings'?' on':''}" data-tab="${state.tab==='settings'?state.lastTab:'settings'}" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24">${ICON_GEAR}</svg></button>`;
   const tabs = document.getElementById('tabs');
