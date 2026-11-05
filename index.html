@@ -219,9 +219,9 @@
   <div id="tabs"></div>
 </div>
 
-<script src="backend.js?v=5"></script>
+<script src="backend.js?v=6"></script>
 <script>
-const APP_VERSION="5";
+const APP_VERSION="6";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
@@ -251,6 +251,8 @@ const ymd = (d) => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-
 const TODAY = () => ymd(new Date());
 /* Sunday of this week: a reminder up to it is due. */
 const weekEnd = () => { const d = new Date(); d.setDate(d.getDate() + (7 - (d.getDay() || 7))); return ymd(d); };
+/* Sunday of next week: Monday to it is next week. */
+const nextWeekEnd = () => { const d = new Date(); d.setDate(d.getDate() + (7 - (d.getDay() || 7)) + 7); return ymd(d); };
 const uid = (p) => (p||'t') + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const live = () => store.tasks.filter((t)=>!t.deleted);
 const blank = (status) => ({ id:'', name:'', status:status||'Todo', created:'', updated:'', doneOn:'',
@@ -308,9 +310,16 @@ function setStatus(t, s){ if (s==='Done' && t.status!=='Done') t.doneOn = TODAY(
 const KINDS = [['status','Status'], ['due','Due'], ['person','Assignee'], ['tag','Tag']];
 const KIND_LABEL = Object.fromEntries(KINDS);
 const NONE = '(none)';
-/* Due: This week (a step due by Sunday, the late ones too), Later, or (none). */
-const DUES = ['This week', 'Later'];
-const dueOf = (t) => { const d = nextDue(t); return !d ? [] : d <= weekEnd() ? ['This week'] : ['Later']; };
+/* Due: when the steps not done are due - This week (by Sunday, the late
+   ones too), Next week (Monday to the Sunday after), Later, or (none). A task
+   with steps on several of them is in each: one due this week and one next
+   week shows in both lists. */
+const DUES = ['This week', 'Next week', 'Later'];
+function dueOf(t){
+  const we = weekEnd(), nwe = nextWeekEnd(), out = new Set();
+  for (const st of t.steps) if (!st.done && st.due) out.add(st.due <= we ? 'This week' : st.due <= nwe ? 'Next week' : 'Later');
+  return DUES.filter((d)=>out.has(d));
+}
 const blankFilter = () => ({ q:'', inc:[], exc:[] });
 const valuesOf = (t, kind) => kind==='status' ? [t.status] : kind==='tag' ? t.tags : kind==='due' ? dueOf(t) : t.assignees;
 function matches(t, f){
@@ -380,15 +389,15 @@ function moveTask(from, to){
 }
 
 /* Every task kept by an older version takes the shape of this one (see
-   migrateTask), and goes up again so the sheet takes it too. This week is a
-   list of its own from the start: a bookmark on the Due filter, by due date
-   - deletable like any other, and a phone that has never seen it makes it
+   migrateTask), and goes up again so the sheet takes it too. This week and
+   Next week are lists of their own from the start: bookmarks on the Due
+   filter, by due date - deletable like any other, and a phone that has never seen it makes it
    with no date, so the sheet's (or its deletion) always wins. */
 for (const t of store.tasks) if (migrateTask(t) && !store.dirty.includes('T:'+t.id)) store.dirty.push('T:'+t.id);
 for (const b of store.bookmarks) if (!b.sort) b.sort = 'custom';
-if (!store.bookmarks.some((b)=>b.id==='week')) {
-  store.bookmarks.push(newBm('week', 'This week', { q:'', inc:[{ kind:'due', name:'This week' }], exc:[] }, 'due'));
-  store.dirty.push('B:week');
+for (const [id, name] of [['week', 'This week'], ['nextweek', 'Next week']]) if (!store.bookmarks.some((b)=>b.id===id)) {
+  store.bookmarks.push(newBm(id, name, { q:'', inc:[{ kind:'due', name }], exc:[] }, 'due'));
+  store.dirty.push('B:'+id);
 }
 
 /* ------------------------------------------------------- the sheet's rows --
@@ -566,7 +575,9 @@ function filterChips(f){
   return chips.length ? `<div class="fchips">${chips.map(([cls,key,label])=>`<span class="fchip ${cls}">${label}<b data-funf="${key}">×</b></span>`).join('')}</div>` : '';
 }
 /* the bookmarks along the top: All, This week, then the rest as made */
-const bmShown = () => [{ id:'all', name:'All' }].concat(bmLive().filter((x)=>x.id==='week'), bmLive().filter((x)=>x.id!=='all' && x.id!=='week'));
+/* the bookmarks along the top: All, This week, Next week, then the rest as made */
+const BUILT_IN = ['all', 'week', 'nextweek'];
+const bmShown = () => [{ id:'all', name:'All' }].concat(['week', 'nextweek'].map((id)=>bmLive().find((x)=>x.id===id)).filter(Boolean), bmLive().filter((x)=>!BUILT_IN.includes(x.id)));
 function screenTasks(){
   const f = curFilter(), b = activeBm(), ts = shownTasks(), sort = sortOf();
   const changed = b ? filterKey(f) !== filterKey(b.filter) : filterOn(f);
