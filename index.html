@@ -258,9 +258,9 @@
 </div>
 <nav id="nav"></nav>
 
-<script src="backend.js?v=14"></script>
+<script src="backend.js?v=15"></script>
 <script>
-const APP_VERSION="14";
+const APP_VERSION="15";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
@@ -902,6 +902,22 @@ function screenList(){
       <div class="trow${t.status==='Done'?' done':''}${state.dragIdx===i?' lift':''}" data-topen="${esc(t.id)}" data-trow="${i}">${sdot(t.status)}<span class="tn">${esc(t.name)}</span>${
         nd ? `<span class="when ${dueClass(nd)}">${esc(dLabel(nd))}</span>` : ''}${sort==='custom' ? `<span class="drag" data-tdrag="${i}">⠿</span>` : ''}</div>`; }).join('')
       || `<div class="empty">${live().length ? 'Nothing here.' : 'No tasks yet.'}</div>`}</div>
+  </div>${state.tab==='week' ? nextWeekCard() : ''}`;
+}
+/* Under This week, what next week holds: every task with a step not done due
+   Monday to Sunday next week, by that step's day - your filter on This week
+   narrows it too. A task with steps in both weeks is in both. */
+const nextWeekDue = (t) => { const we = weekEnd(), nwe = nextWeekEnd(); let d = '';
+  for (const st of t.steps) if (!st.done && st.due && st.due > we && st.due <= nwe && (!d || st.due < d)) d = st.due; return d; };
+function nextWeekCard(){
+  const u = userFilter();
+  const ts = live().filter((t)=>nextWeekDue(t) && matches(t, u)).sort((a,b)=>nextWeekDue(a).localeCompare(nextWeekDue(b)) || byName(a,b));
+  return `
+  <div class="card">
+    <h2><span class="ttl">Next week<span class="n">${ts.length}</span></span></h2>
+    <div class="tlist">${ts.map((t)=>`
+      <div class="trow" data-topen="${esc(t.id)}">${sdot(t.status)}<span class="tn">${esc(t.name)}</span><span class="when">${esc(WD[dOf(nextWeekDue(t)).getDay()] + ' ' + dLabel(nextWeekDue(t)))}</span></div>`).join('')
+      || '<div class="empty">Nothing due next week.</div>'}</div>
   </div>`;
 }
 
