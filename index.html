@@ -132,7 +132,7 @@
   .switch .track.on{background:var(--accent)}
   .switch .track.on::after{left:20px}
 
-  /* The progress bar: checklist items done over all of them. */
+  /* The progress bar: next steps done over all of them. */
   .bbar{height:5px;background:var(--bg2);border-radius:4px;overflow:hidden;margin:2px 0 6px}
   .bbar i{display:block;height:100%;border-radius:4px;background:var(--accent)}
   .bbar i.full{background:var(--good)}
@@ -181,7 +181,7 @@
   .fchip.plain{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
   .fchip b{cursor:pointer;opacity:.75;font-weight:700}
 
-  /* The editor's own lists: checklist, reminders, costs. */
+  /* The editor's own lists: next steps, updates, costs. */
   .li{display:flex;align-items:center;gap:6px;margin-bottom:4px}
   .li input{padding:4px 8px;font-size:13px;min-width:0}
   .li input.d{flex:0 0 132px}
@@ -193,8 +193,16 @@
   .vli .t{flex:1;min-width:0;overflow-wrap:anywhere}
   .vli.done .t{color:var(--muted);text-decoration:line-through}
   .vli .v{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .vli .when{font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
-  .vli .when.due{color:var(--warn)} .vli .when.late{color:var(--bad)}
+  .when{font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;flex:none}
+  .when.due{color:var(--warn)} .when.late{color:var(--bad)}
+  .trow .when{font-size:11.5px}
+  .li input.d{flex:0 0 118px;padding:4px 6px}
+  .addupd{display:flex;gap:6px;align-items:flex-end;margin-bottom:6px}
+  .addupd textarea{min-height:44px}
+  .addupd .btn{flex:0 0 auto;padding:8px 12px}
+  .upd{display:flex;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+  .upd .when{flex:0 0 46px;padding-top:2px}
+  .upd .info{flex:1;min-width:0}
   .tot{display:flex;justify-content:flex-end;gap:12px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;padding:2px 0 0}
 </style>
 </head>
@@ -205,9 +213,9 @@
   <div id="tabs"></div>
 </div>
 
-<script src="backend.js?v=2"></script>
+<script src="backend.js?v=3"></script>
 <script>
-const APP_VERSION="2";
+const APP_VERSION="3";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
@@ -224,9 +232,9 @@ const state = { tab:'tasks', view:null, edit:null, about:null, bmEdit:null, sync
 
 /* ------------------------------------------------------------- the model --
    A task: a name, a status, the day it was made and the moment it last
-   changed, a checklist (its progress), reminders (a date and what to do),
-   tags, assignees, a cost list in euros or dollars, a note, and whether it
-   is one for this week. A deleted task keeps its row, Deleted filled, so a
+   changed, its next steps (each ticked off, each maybe due on a day; their
+   progress), its updates (each dated the day it was written), tags,
+   assignees, and a cost list in euros or dollars. A deleted task keeps its row, Deleted filled, so a
    phone that still has it cannot bring it back. */
 const STATUSES = ['Backlog','Todo','In progress','Blocked','Action needed','Done'];
 const STATUS_COLOR = { 'Backlog':'#000000', 'Todo':'#8a92a6', 'In progress':'#3b82f6', 'Blocked':'#f87171', 'Action needed':'#fbbf24', 'Done':'#4ade80' };
@@ -239,16 +247,32 @@ const TODAY = () => ymd(new Date());
 const weekEnd = () => { const d = new Date(); d.setDate(d.getDate() + (7 - (d.getDay() || 7))); return ymd(d); };
 const uid = (p) => (p||'t') + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const live = () => store.tasks.filter((t)=>!t.deleted);
-const blank = (status) => ({ id:'', name:'', status:status||'Todo', created:'', updated:'', doneOn:'', info:'',
-  checklist:[], reminders:[], tags:[], assignees:[], costs:[], week:false, deleted:'' });
-const progress = (t) => { const n = t.checklist.length, d = t.checklist.filter((i)=>i.done).length; return { n, d, pct: n ? Math.round(d*100/n) : 0 }; };
+const blank = (status) => ({ id:'', name:'', status:status||'Todo', created:'', updated:'', doneOn:'',
+  steps:[], updates:[], tags:[], assignees:[], costs:[], deleted:'' });
+const progress = (t) => { const n = t.steps.length, d = t.steps.filter((i)=>i.done).length; return { n, d, pct: n ? Math.round(d*100/n) : 0 }; };
+/* v1-v2 kept a checklist and reminders apart, a note in Infos and a This
+   week switch. Now: the checklist and the reminders are the next steps (a
+   reminder is a step with its date due), the note is the first update,
+   dated the day the task last changed, and This week is any task with a
+   step due this week. Nothing typed is lost. */
+function migrateTask(t){
+  if (!t || Array.isArray(t.steps) && Array.isArray(t.updates) && !('checklist' in t) && !('reminders' in t) && !('info' in t) && !('week' in t)) return false;
+  t.steps = (t.steps||[]).concat((t.checklist||[]).map((i)=>({ done:!!i.done, text:i.text||'', due:'' })),
+    (t.reminders||[]).map((r)=>({ done:!!r.done, text:r.text||'', due:r.date||'' })));
+  t.updates = (t.updates||[]).concat(t.info ? [{ date:String(t.updated||t.created||NOW()).slice(0,10), text:t.info }] : []);
+  delete t.checklist; delete t.reminders; delete t.info; delete t.week;
+  return true;
+}
+/* The step that comes next: the earliest due one not done. */
+const nextDue = (t) => { let d = ''; for (const s of t.steps) if (!s.done && s.due && (!d || s.due < d)) d = s.due; return d; };
+/* This week: a step not done, due by Sunday - the late ones too. */
+const dueThisWeek = (t) => { const d = nextDue(t); return !!d && d <= weekEnd(); };
+const dueClass = (d) => !d ? '' : d < TODAY() ? 'late' : d <= weekEnd() ? 'due' : '';
 const r2 = (x) => Math.round(x*100)/100;
 /* an amount as typed: a comma is a decimal point too */
 const num = (a) => { const s = String(a==null?'':a).replace(',', '.').trim(); return s==='' || !isFinite(+s) ? null : +s; };
 const costTotals = (costs) => { const out = {}; for (const c of costs) { const v = num(c.amount); if (v!=null) out[c.cur] = r2((out[c.cur]||0) + v); } return out; };
 const money = (v, cur) => (v<0?'-':'') + SYM[cur] + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
-/* The reminder that comes next: the earliest one not ticked off. */
-const nextReminder = (t) => t.reminders.filter((r)=>!r.done && r.date).sort((a,b)=>a.date<b.date?-1:1)[0] || null;
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const dLabel = (d) => { if (!d) return ''; const s = String(d).slice(0,10); const [y,m,dd] = s.split('-');
   return (+dd) + ' ' + MON[+m-1] + (y===TODAY().slice(0,4) ? '' : ' ' + y); };
@@ -264,17 +288,21 @@ function setStatus(t, s){ if (s==='Done' && t.status!=='Done') t.doneOn = TODAY(
 
 /* --------------------------------------------------------------- filters --
    Bench's way: a search, then + filters (keep what has one of them) and −
-   filters (drop what has any), on the status, the tags and the assignees.
-   Within one kind any value will do; across kinds, all of them. Done tasks
-   stay out of a list unless its filter picks a status. */
-const KINDS = [['status','Status'], ['person','Assignee'], ['tag','Tag']];
+   filters (drop what has any), on the status, the tags, the assignees and
+   when the next step is due. Within one kind any value will do; across
+   kinds, all of them. Done tasks stay out of a list unless its filter picks
+   a status. */
+const KINDS = [['status','Status'], ['due','Due'], ['person','Assignee'], ['tag','Tag']];
 const KIND_LABEL = Object.fromEntries(KINDS);
 const NONE = '(none)';
+/* Due: This week (a step due by Sunday, the late ones too), Later, or (none). */
+const DUES = ['This week', 'Later'];
+const dueOf = (t) => { const d = nextDue(t); return !d ? [] : d <= weekEnd() ? ['This week'] : ['Later']; };
 const blankFilter = () => ({ q:'', inc:[], exc:[] });
-const valuesOf = (t, kind) => kind==='status' ? [t.status] : kind==='tag' ? t.tags : t.assignees;
+const valuesOf = (t, kind) => kind==='status' ? [t.status] : kind==='tag' ? t.tags : kind==='due' ? dueOf(t) : t.assignees;
 function matches(t, f){
   const q = String(f.q||'').toLowerCase().split(/\s+/).filter(Boolean);
-  if (q.length) { const hay = [t.name, t.info, t.tags.join(' '), t.assignees.join(' '), t.checklist.map((i)=>i.text).join(' ')].join(' ').toLowerCase();
+  if (q.length) { const hay = [t.name, t.updates.map((u)=>u.text).join(' '), t.tags.join(' '), t.assignees.join(' '), t.steps.map((i)=>i.text).join(' ')].join(' ').toLowerCase();
     if (!q.every((w)=>hay.includes(w))) return false; }
   const has = (e) => { const v = valuesOf(t, e.kind); return e.name===NONE ? !v.length : v.some((x)=>same(x, e.name)); };
   for (const [kind] of KINDS) { const inc = f.inc.filter((e)=>e.kind===kind); if (inc.length && !inc.some(has)) return false; }
@@ -287,25 +315,43 @@ const filterOn = (f) => !!(String(f.q||'').trim() || f.inc.length || f.exc.lengt
 const curFilter = () => store.filter || (store.filter = blankFilter());
 
 /* -------------------------------------------------------------- bookmarks --
-   A bookmark is a filter kept under a name, and the order its list is in:
-   every list has its own, dragged by hand. 'all' is the list with no
-   bookmark; its order is kept the same way. A task not yet in a list's
-   order shows at the top, newest first, until it is dragged. */
+   A bookmark is a filter kept under a name, how its list is sorted, and its
+   own order, dragged by hand. 'all' is the list with no bookmark; it keeps
+   its sort and order the same way. In the custom order a task not yet
+   placed shows at the top, newest first, until it is dragged. */
+const SORTS = [['custom','Custom'], ['due','Due date'], ['name','Name'], ['person','Assignee'], ['status','Status']];
+const SORT_LABEL = Object.fromEntries(SORTS);
+/* By status: what needs a hand first. */
+const STATUS_RANK = ['Action needed','Blocked','In progress','Todo','Backlog','Done'];
 const bmLive = () => store.bookmarks.filter((b)=>!b.deleted);
 const bmById = (id) => store.bookmarks.find((b)=>b.id===id && !b.deleted) || null;
 const activeBm = () => (store.bm && store.bm!=='all' && bmById(store.bm)) || null;
 const orderKey = () => activeBm() ? store.bm : 'all';
+const newBm = (id, name, filter, sort) => ({ id, name, filter:filter||blankFilter(), sort:sort||'custom', order:[], updated:'', deleted:'' });
 function ensureOrder(id){
   let b = store.bookmarks.find((x)=>x.id===id);
-  if (!b) { b = { id, name: id==='all' ? 'All' : '', filter:blankFilter(), order:[], updated:'', deleted:'' }; store.bookmarks.push(b); }
+  if (!b) { b = newBm(id, id==='all' ? 'All' : ''); store.bookmarks.push(b); }
   return b;
 }
+const sortOf = () => { const b = store.bookmarks.find((x)=>x.id===orderKey()); return (b && b.sort) || 'custom'; };
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity:'base', numeric:true });
 function shownTasks(){
-  const f = curFilter(), b = store.bookmarks.find((x)=>x.id===orderKey()), ord = (b && b.order) || [];
-  const pos = new Map(ord.map((id,i)=>[id,i]));
+  const f = curFilter(), b = store.bookmarks.find((x)=>x.id===orderKey()), ord = (b && b.order) || [], sort = sortOf();
   const ts = live().filter((t)=>matches(t, f));
-  const fresh = ts.filter((t)=>!pos.has(t.id)).sort((a,b)=>String(b.created).localeCompare(String(a.created)));
-  return fresh.concat(ts.filter((t)=>pos.has(t.id)).sort((a,b)=>pos.get(a.id)-pos.get(b.id)));
+  if (sort==='custom') {
+    const pos = new Map(ord.map((id,i)=>[id,i]));
+    const fresh = ts.filter((t)=>!pos.has(t.id)).sort((a,b)=>String(b.created).localeCompare(String(a.created)));
+    return fresh.concat(ts.filter((t)=>pos.has(t.id)).sort((a,b)=>pos.get(a.id)-pos.get(b.id)));
+  }
+  /* a task with nothing to sort on goes last */
+  const last = (x, y, cmp) => !x && !y ? 0 : !x ? 1 : !y ? -1 : cmp(x, y);
+  const by = {
+    due: (a,b) => last(nextDue(a), nextDue(b), (x,y)=>x.localeCompare(y)),
+    name: () => 0,
+    person: (a,b) => last(a.assignees[0], b.assignees[0], (x,y)=>x.localeCompare(y, undefined, { sensitivity:'base' })),
+    status: (a,b) => STATUS_RANK.indexOf(a.status) - STATUS_RANK.indexOf(b.status) || last(nextDue(a), nextDue(b), (x,y)=>x.localeCompare(y)),
+  }[sort] || (()=>0);
+  return ts.sort((a,b)=>by(a,b) || byName(a,b));
 }
 /* Move the task at `from` to `to` in the list as shown; the list's order
    becomes what is shown, followed by what it held that is not showing. */
@@ -320,37 +366,71 @@ function moveTask(from, to){
   return true;
 }
 
+/* Every task kept by an older version takes the shape of this one (see
+   migrateTask), and goes up again so the sheet takes it too. This week is a
+   list of its own from the start: a bookmark on the Due filter, by due date
+   - deletable like any other, and a phone that has never seen it makes it
+   with no date, so the sheet's (or its deletion) always wins. */
+for (const t of store.tasks) if (migrateTask(t) && !store.dirty.includes('T:'+t.id)) store.dirty.push('T:'+t.id);
+for (const b of store.bookmarks) if (!b.sort) b.sort = 'custom';
+if (!store.bookmarks.some((b)=>b.id==='week')) {
+  store.bookmarks.push(newBm('week', 'This week', { q:'', inc:[{ kind:'due', name:'This week' }], exc:[] }, 'due'));
+  store.dirty.push('B:week');
+}
+
 /* ------------------------------------------------------- the sheet's rows --
    Tasks: one row per task. The lists sit in one cell each, one line per
    item, written so they read well in the sheet and can be typed by hand:
-     Checklist   [x] buy paint          Reminders   [ ] 2026-11-12 call the plumber
+     Next steps  [x] buy paint / [ ] 2026-11-12 call the plumber (a due date, if any)
+     Updates     2026-11-05: what happened (newest first; a line with no date
+                 goes on with the update above it)
      Costs       45.90 EUR Paint        Tags, Assignees   comma-separated
-   Bookmarks: one row per saved list; the filter one line per part
-   (Search: paint / + Status: Todo / - Tag: garden), the order as task ids. */
-const TASK_HEADERS = ['Id','Name','Status','Created','Updated','Done on','Tags','Assignees','Checklist','Reminders','Costs','Info','This week','Deleted'];
-const BM_HEADERS = ['Id','Name','Filter','Order','Updated','Deleted'];
+   The columns of the older versions (Checklist, Reminders, Info, This week)
+   are still read, and written back empty while the sheet has them, so a row
+   is moved over the first time it goes up; then they can be deleted.
+   Bookmarks: one row per list; the filter one line per part
+   (Search: paint / + Status: Todo / - Tag: garden), how it sorts, the order
+   as task ids. */
+const TASK_HEADERS = ['Id','Name','Status','Created','Updated','Done on','Tags','Assignees','Next steps','Updates','Costs','Deleted'];
+const LEGACY = ['Checklist','Reminders','Info','This week'];
+const BM_HEADERS = ['Id','Name','Filter','Sort','Order','Updated','Deleted'];
 const lines = (s) => String(s==null?'':s).split(/\r?\n/).map((x)=>x.trim()).filter(Boolean);
 const list = (s) => String(s==null?'':s).split(',').map((x)=>x.trim()).filter(Boolean);
+const stepLine = (s) => (s.done?'[x] ':'[ ] ') + (s.due ? s.due + ' ' : '') + s.text;
+const readSteps = (cell) => lines(cell).map((l)=>{ const m = /^(?:\[([ xX])\]\s*)?(\d{4}-\d{2}-\d{2})?\s*(.*)$/.exec(l);
+  return { done:!!(m[1] && m[1]!==' '), text:m[3]||'', due:m[2]||'' }; });
+function readUpdates(cell){
+  const out = [];
+  for (const l of String(cell==null?'':cell).split(/\r?\n/)) {
+    const m = /^(\d{4}-\d{2}-\d{2}):\s?(.*)$/.exec(l);
+    if (m) out.push({ date:m[1], text:m[2] });
+    else if (out.length) out[out.length-1].text += '\n' + l;
+    else if (l.trim()) out.push({ date:'', text:l });
+  }
+  return out.map((u)=>({ date:u.date, text:u.text.replace(/\s+$/, '') })).filter((u)=>u.text);
+}
+const taskHeaders = () => TASK_HEADERS.concat(store.legacyCols || []);
 function taskRow(t){
   return [t.id, t.name, t.status, t.created, t.updated, t.doneOn||'', t.tags.join(', '), t.assignees.join(', '),
-    t.checklist.map((i)=>(i.done?'[x] ':'[ ] ')+i.text).join('\n'),
-    t.reminders.map((r)=>(r.done?'[x] ':'[ ] ')+r.date+(r.text?' '+r.text:'')).join('\n'),
+    t.steps.map(stepLine).join('\n'),
+    t.updates.map((u)=>(u.date ? u.date + ': ' : '') + u.text).join('\n'),
     t.costs.map((c)=>(c.amount===''||c.amount==null?'':(+c.amount).toFixed(2)+' ')+c.cur+(c.name?' '+c.name:'')).join('\n'),
-    t.info||'', t.week?'yes':'', t.deleted||''];
+    t.deleted||''].concat((store.legacyCols || []).map(()=>''));
 }
+const hasLegacy = (o) => LEGACY.some((k)=>String(o[k]==null?'':o[k]).trim());
 function readTask(o){
   const g = (k) => o[k]==null ? '' : String(o[k]);
   const st = STATUSES.find((s)=>same(s, g('Status'))) || 'Todo';
   return {
     id:g('Id'), name:g('Name'), status:st, created:g('Created'), updated:g('Updated'), doneOn:g('Done on').slice(0,10),
-    info:g('Info'), tags:list(g('Tags')), assignees:list(g('Assignees')),
-    checklist:lines(g('Checklist')).map((l)=>{ const m = /^\[([ xX])\]\s?(.*)$/.exec(l); return m ? { done:m[1]!==' ', text:m[2] } : { done:false, text:l }; }),
-    reminders:lines(g('Reminders')).map((l)=>{ const m = /^(?:\[([ xX])\]\s*)?(\d{4}-\d{2}-\d{2})?\s*(.*)$/.exec(l); return { done:!!(m[1] && m[1]!==' '), date:m[2]||'', text:m[3]||'' }; }),
+    tags:list(g('Tags')), assignees:list(g('Assignees')),
+    steps:readSteps(g('Next steps')).concat(readSteps(g('Checklist')).map((s)=>({ ...s, due:'' })), readSteps(g('Reminders'))),
+    updates:readUpdates(g('Updates')).concat(g('Info').trim() ? [{ date:g('Updated').slice(0,10), text:g('Info').trim() }] : []),
     /* the currency before or after the amount, as a sign or a code */
     costs:lines(g('Costs')).map((l)=>{ const m = /^(€|\$)?\s*(-?[\d.,]+)?\s*(EUR|USD|€|\$)?\s*(.*)$/i.exec(l);
       const c = m[1] || m[3] || '', cur = c==='$' || /usd/i.test(c) ? 'USD' : 'EUR', v = num(m[2]);
       return { name:m[4]||'', amount: v==null ? '' : v, cur }; }),
-    week:/^(yes|true|x|1)$/i.test(g('This week').trim()), deleted:g('Deleted'),
+    deleted:g('Deleted'),
   };
 }
 const filterText = (f) => [String(f.q||'').trim() ? 'Search: '+String(f.q).trim() : null,
@@ -359,21 +439,23 @@ function readFilter(s){
   const f = blankFilter();
   for (const l of lines(s)) {
     let m = /^search:\s*(.*)$/i.exec(l); if (m) { f.q = m[1]; continue; }
-    m = /^([+\-−])\s*(status|assignee|tag)s?:\s*(.+)$/i.exec(l); if (!m) continue;
+    m = /^([+\-−])\s*(status|due|assignee|tag)s?:\s*(.+)$/i.exec(l); if (!m) continue;
     const kind = KINDS.find(([,lab])=>same(lab, m[2]))[0];
-    const name = kind==='status' ? (STATUSES.find((s)=>same(s, m[3])) || null) : m[3].trim();
+    const name = kind==='status' ? (STATUSES.find((s)=>same(s, m[3])) || null) : kind==='due' ? (DUES.concat([NONE]).find((s)=>same(s, m[3])) || null) : m[3].trim();
     if (name) (m[1]==='+' ? f.inc : f.exc).push({ kind, name });
   }
   return f;
 }
-const bmRow = (b) => [b.id, b.name, filterText(b.filter), b.order.join(', '), b.updated, b.deleted||''];
+const bmRow = (b) => [b.id, b.name, filterText(b.filter), SORT_LABEL[b.sort||'custom'], b.order.join(', '), b.updated, b.deleted||''];
 const readBm = (o) => { const g = (k) => o[k]==null ? '' : String(o[k]);
-  return { id:g('Id'), name:g('Name') || (g('Id')==='all' ? 'All' : ''), filter:readFilter(g('Filter')), order:list(g('Order')), updated:g('Updated'), deleted:g('Deleted') }; };
+  const sort = (SORTS.find(([k,lab])=>same(lab, g('Sort')) || same(k, g('Sort'))) || ['custom'])[0];
+  return { id:g('Id'), name:g('Name') || (g('Id')==='all' ? 'All' : ''), filter:readFilter(g('Filter')), sort, order:list(g('Order')), updated:g('Updated'), deleted:g('Deleted') }; };
 /* A tab as records: header names to cell values. */
 const records = (tab) => { const h = ((tab && tab.headers) || []).map((x)=>String(x).trim());
   return ((tab && tab.rows) || []).map((r)=>{ const o = {}; h.forEach((k,i)=>{ o[k] = r[i]; }); return o; }).filter((o)=>o.Id); };
-const TABS = { T:{ name:'Tasks', headers:TASK_HEADERS, row:taskRow, read:readTask, key:'tasks' },
-               B:{ name:'Bookmarks', headers:BM_HEADERS, row:bmRow, read:readBm, key:'bookmarks' } };
+const TABS = { T:{ name:'Tasks', headers:taskHeaders, row:taskRow, read:readTask, key:'tasks' },
+               B:{ name:'Bookmarks', headers:()=>BM_HEADERS, row:bmRow, read:readBm, key:'bookmarks' } };
+
 
 /* ------------------------------------------------------------------- sync --
    Every edit marks its record; shortly after, the marked records go to the
@@ -393,7 +475,7 @@ async function syncNow(quiet){
   for (const k of store.dirty) { const r = recOf(k); if (r) sent[k] = r.updated; }
   const keys = Object.keys(sent);
   const tabs = Object.keys(TABS).map((p)=>{ const T = TABS[p], ids = keys.filter((k)=>k[0]===p).map((k)=>k.slice(2));
-    return ids.length ? { name:T.name, headers:T.headers, rows:store[T.key].filter((x)=>ids.includes(x.id)).map(T.row) } : null; }).filter(Boolean);
+    return ids.length ? { name:T.name, headers:T.headers(), rows:store[T.key].filter((x)=>ids.includes(x.id)).map(T.row) } : null; }).filter(Boolean);
   if (!quiet) { state.sync = { msg:'Syncing…' }; render(); }
   syncing = (async () => {
     try {
@@ -415,16 +497,22 @@ async function syncNow(quiet){
 function absorb(p, tabs){
   const T = TABS[p], tab = tabs.find((t)=>t.name===T.name);
   if (!tab) return;
+  /* the older columns the sheet still has: written back empty, and a row
+     that still holds something in them goes up again, moved over */
+  if (p==='T') store.legacyCols = LEGACY.filter((k)=>(tab.headers||[]).map((h)=>String(h).trim()).includes(k));
+  let moved = 0;
   const waiting = new Set(store.dirty.filter((k)=>k[0]===p).map((k)=>k.slice(2)));
   const here = new Map(store[T.key].map((x)=>[x.id, x]));
   const out = [];
   for (const o of records(tab)) {
     const r = T.read(o), l = here.get(r.id);
+    if (p==='T' && hasLegacy(o) && !waiting.has(r.id)) { markDirty('T:'+r.id); moved++; }
     out.push(l && waiting.has(l.id) && String(l.updated) > String(r.updated) ? l : r);
     here.delete(r.id);
   }
   for (const l of here.values()) if (waiting.has(l.id)) out.push(l);
   store[T.key] = out;
+  if (moved) syncSoon();
 }
 /* A change: keep it, show it, send it. */
 function commit(k, quiet){ markDirty(k); save(); if (!quiet) render(); syncSoon(); }
@@ -440,7 +528,7 @@ function filterMenu(f){
   const pickList = () => {
     const group = (label, kind, names, dot) => names.length ? `<div class="grp">${label}</div>` + names.map((n)=>
       `<button data-fadd="${state.fpick}|${kind}|${esc(n)}">${dot(n)}${esc(n)}</button>`).join('') : '';
-    return `<div class="fpick">${group('Status', 'status', STATUSES, sdot)}${group('Assignee', 'person', known('assignees').concat([NONE]), (n)=>n===NONE?'':`<span class="dot" style="background:${colorOf(n)}"></span>`)}${group('Tag', 'tag', known('tags').concat([NONE]), ()=>'')}</div>`;
+    return `<div class="fpick">${group('Status', 'status', STATUSES, sdot)}${group('Due', 'due', DUES.concat([NONE]), ()=>'')}${group('Assignee', 'person', known('assignees').concat([NONE]), (n)=>n===NONE?'':`<span class="dot" style="background:${colorOf(n)}"></span>`)}${group('Tag', 'tag', known('tags').concat([NONE]), ()=>'')}</div>`;
   };
   return `
   <div class="fscrim" data-fopen="0"></div>
@@ -455,38 +543,44 @@ function filterMenu(f){
 function filterChips(f){
   const chips = [];
   if (String(f.q||'').trim()) chips.push(['plain', 'q', '“'+esc(f.q.trim())+'”']);
-  const lab = (e) => (e.kind==='status' ? sdot(e.name) : e.kind==='person' && e.name!==NONE ? `<span class="dot" style="background:${colorOf(e.name)}"></span>` : '') + esc(e.name);
+  const lab = (e) => (e.kind==='status' ? sdot(e.name) : e.kind==='person' && e.name!==NONE ? `<span class="dot" style="background:${colorOf(e.name)}"></span>` : '')
+    + (e.kind==='due' ? 'Due: ' : '') + esc(e.name);
   f.inc.forEach((e,i)=>chips.push(['', 'inc|'+i, lab(e)]));
   f.exc.forEach((e,i)=>chips.push(['exc', 'exc|'+i, '− '+lab(e)]));
   return chips.length ? `<div class="fchips">${chips.map(([cls,key,label])=>`<span class="fchip ${cls}">${label}<b data-funf="${key}">×</b></span>`).join('')}</div>` : '';
 }
+/* the bookmarks along the top: All, This week, then the rest as made */
+const bmShown = () => [{ id:'all', name:'All' }].concat(bmLive().filter((x)=>x.id==='week'), bmLive().filter((x)=>x.id!=='all' && x.id!=='week'));
 function screenTasks(){
-  const f = curFilter(), b = activeBm(), ts = state.dragSeq || shownTasks();
+  const f = curFilter(), b = activeBm(), ts = shownTasks(), sort = sortOf();
   const changed = b ? filterKey(f) !== filterKey(b.filter) : filterOn(f);
-  const bms = [{ id:'all', name:'All' }].concat(bmLive().filter((x)=>x.id!=='all'));
+  const nextSort = SORTS[(SORTS.findIndex(([k])=>k===sort)+1) % SORTS.length][0];
   return `
-  <div class="bmbar">${bms.map((x)=>`<button class="chip sm${orderKey()===x.id?' on':''}" data-bm="${esc(x.id)}">${esc(x.name)}</button>`).join('')}
+  <div class="bmbar">${bmShown().map((x)=>`<button class="chip sm${orderKey()===x.id?' on':''}" data-bm="${esc(x.id)}">${esc(x.name)}</button>`).join('')}
     ${changed ? `<button class="chip sm add" data-bmnew="1">+ Bookmark</button>` : ''}
     ${changed && b ? `<button class="chip sm add" data-bmupd="1">Update ${esc(b.name)}</button>` : ''}</div>
   <div class="card">
     <h2><span>${esc(b ? b.name : 'Tasks')}<span class="n">${ts.length}</span></span>
-      <span class="hbtns"><span class="fdrop"><button class="fbtn ${filterOn(f)?'act':''}" data-fopen="${state.fopen?0:1}">🔍</button>${state.fopen?filterMenu(f):''}</span>
+      <span class="hbtns"><button class="chip on sm" data-bmsort="${nextSort}">${esc(SORT_LABEL[sort])}</button>
+        <span class="fdrop"><button class="fbtn ${filterOn(f)?'act':''}" data-fopen="${state.fopen?0:1}">🔍</button>${state.fopen?filterMenu(f):''}</span>
         <button class="gbtn" data-tnew="1" aria-label="New task">+</button></span></h2>
     ${filterChips(f)}
-    <div class="tlist">${ts.map((t,i)=>`
-      <div class="trow${t.status==='Done'?' done':''}${state.dragIdx===i?' lift':''}" data-topen="${esc(t.id)}" data-trow="${i}">${sdot(t.status)}<span class="tn">${esc(t.name)}</span><span class="drag" data-tdrag="${i}">⠿</span></div>`).join('')
+    <div class="tlist">${ts.map((t,i)=>{ const nd = sort==='due' ? nextDue(t) : '';
+      return `
+      <div class="trow${t.status==='Done'?' done':''}${state.dragIdx===i?' lift':''}" data-topen="${esc(t.id)}" data-trow="${i}">${sdot(t.status)}<span class="tn">${esc(t.name)}</span>${
+        nd ? `<span class="when ${dueClass(nd)}">${esc(dLabel(nd))}</span>` : ''}${sort==='custom' ? `<span class="drag" data-tdrag="${i}">⠿</span>` : ''}</div>`; }).join('')
       || `<div class="empty">${live().length ? 'Nothing here.' : 'No tasks yet.'}</div>`}</div>
   </div>`;
 }
 
 /* --------------------------------------------------------- the task page --
-   What a task is, as it reads. The checklist ticks here and the status
-   changes here; everything else is the editor's (✏️). */
+   What a task is, as it reads. Here a step is ticked, the status changed and
+   an update written (dated today); everything else is the editor's (✏️). */
+const updatesHtml = (ups) => ups.map((u)=>`<div class="upd"><span class="when">${esc(u.date ? dLabel(u.date) : '')}</span><div class="info">${esc(u.text)}</div></div>`).join('');
 function screenTask(){
   const t = store.tasks.find((x)=>x.id===state.view);
   if (!t || t.deleted) { state.view = null; return screenTasks(); }
-  const p = progress(t), tot = costTotals(t.costs), td = TODAY(), we = weekEnd();
-  const rems = t.reminders.slice().sort((a,b)=>a.done-b.done || (a.date<b.date?-1:1));
+  const p = progress(t), tot = costTotals(t.costs);
   return `
   <div class="page">
     <div class="ptitle"><h2>${esc(t.name)}</h2><button class="gbtn" data-tedit="${esc(t.id)}" aria-label="Edit">✏️</button></div>
@@ -494,16 +588,25 @@ function screenTask(){
     ${state.statPick ? `<div class="spick">${STATUSES.filter((s)=>s!==t.status).map((s)=>`<button class="chip sm" data-vset="${esc(s)}">${sdot(s)}${esc(s)}</button>`).join('')}</div>` : ''}
     ${t.assignees.length ? `<div class="sec">Assignees</div><div class="caps">${t.assignees.map((a)=>capOf(a)).join('')}</div>` : ''}
     ${t.tags.length ? `<div class="sec">Tags</div><div class="caps">${t.tags.map((g)=>`<span class="cap">${esc(g)}</span>`).join('')}</div>` : ''}
-    ${t.info ? `<div class="sec">Infos</div><div class="info">${esc(t.info)}</div>` : ''}
-    ${p.n ? `<div class="sec"><span>Checklist</span><span>${p.d}/${p.n}</span></div>${bar(p)}
-      ${t.checklist.map((it,i)=>`<div class="vli${it.done?' done':''}"><span class="ck${it.done?' on':''}" data-vck="${i}">${it.done?'✓':''}</span><span class="t">${esc(it.text)}</span></div>`).join('')}` : ''}
-    ${rems.length ? `<div class="sec">Reminders</div>${rems.map((r)=>`<div class="vli${r.done?' done':''}"><span class="when ${r.done?'':r.date<td?'late':r.date<=we?'due':''}">${esc(dLabel(r.date))}</span><span class="t">${esc(r.text)}</span></div>`).join('')}` : ''}
+    ${p.n ? `<div class="sec"><span>Next steps</span><span>${p.d}/${p.n}</span></div>${bar(p)}
+      ${t.steps.map((s,i)=>`<div class="vli${s.done?' done':''}"><span class="ck${s.done?' on':''}" data-vck="${i}">${s.done?'✓':''}</span><span class="t">${esc(s.text)}</span>${
+        s.due ? `<span class="when ${s.done?'':dueClass(s.due)}">${esc(dLabel(s.due))}</span>` : ''}</div>`).join('')}` : ''}
+    <div class="sec">Updates</div>
+    <div class="addupd"><textarea id="vUpd" placeholder="What happened…">${esc(state.updDraft||'')}</textarea>
+      <button class="btn primary" data-vupd="1">Add</button></div>
+    ${updatesHtml(t.updates)}
     ${t.costs.length ? `<div class="sec">Costs</div>${t.costs.map((c)=>`<div class="vli"><span class="t">${esc(c.name)}</span><span class="v">${num(c.amount)!=null?esc(money(num(c.amount), c.cur)):''}</span></div>`).join('')}
       <div class="tot">${Object.keys(tot).map((c)=>`<span>${esc(money(tot[c], c))}</span>`).join('')}</div>` : ''}
-    ${t.week ? `<div class="sec">This week</div>` : ''}
     <div class="stamp">Created ${esc(dLabel(t.created))} · Updated ${esc(dLabel(t.updated))}${t.doneOn?' · Done '+esc(dLabel(t.doneOn)):''}</div>
     <div class="closebar"><button class="btn close" data-vclose="1">Close</button></div>
   </div>`;
+}
+/* An update: what was typed, dated today, on top. */
+function addUpdate(t, text){
+  const v = String(text||'').replace(/\s+$/, '').replace(/^\s*\n/, '');
+  if (!v.trim()) return false;
+  t.updates.unshift({ date:TODAY(), text:v });
+  return true;
 }
 
 /* ------------------------------------------------------- the task editor --
@@ -519,16 +622,16 @@ function openEditor(id){
     const f = curFilter(), st = f.inc.filter((e)=>e.kind==='status');
     if (st.length===1) d.status = st[0].name;
     for (const e of f.inc) if (e.name!==NONE) { if (e.kind==='tag') d.tags.push(e.name); if (e.kind==='person') d.assignees.push(e.name); } }
-  state.edit = { id: t ? t.id : null, d:Object.assign(d, { tagIn:'', asgIn:'', ckIn:'' }), delArm:false, focus: t ? null : 'tName' };
+  state.edit = { id: t ? t.id : null, d:Object.assign(d, { tagIn:'', asgIn:'', stIn:'', upIn:'' }), delArm:false, focus: t ? null : 'tName' };
   state.view = null; state.statPick = false;
   render();
 }
 /* The draft as it is stored: no empty lines, amounts as numbers. */
 function cleaned(d){
   return {
-    name:d.name.trim(), info:d.info, week:d.week, tags:d.tags.slice(), assignees:d.assignees.slice(),
-    checklist:d.checklist.map((i)=>({ done:i.done, text:i.text.trim() })).filter((i)=>i.text),
-    reminders:d.reminders.map((r)=>({ done:r.done, date:r.date, text:r.text.trim() })).filter((r)=>r.date),
+    name:d.name.trim(), tags:d.tags.slice(), assignees:d.assignees.slice(),
+    steps:d.steps.map((s)=>({ done:s.done, text:s.text.trim(), due:s.due||'' })).filter((s)=>s.text || s.due),
+    updates:d.updates.map((u)=>({ date:u.date, text:u.text.replace(/\s+$/, '') })).filter((u)=>u.text.trim()),
     costs:d.costs.map((c)=>{ const v = num(c.amount); return { name:c.name.trim(), amount: v==null ? '' : r2(v), cur:c.cur }; }).filter((c)=>c.name || c.amount!==''),
   };
 }
@@ -565,18 +668,18 @@ function screenEdit(){
     <div class="field"><label>Status</label><div class="chips">${STATUSES.map((s)=>`<button class="chip sm${d.status===s?' on':''}" data-pstat="${esc(s)}">${sdot(s)}${esc(s)}</button>`).join('')}</div></div>
     ${boxField('Assignees', 'assignees', 'tAsgIn', 'pasgx', 'pasgadd')}
     ${boxField('Tags', 'tags', 'tTagIn', 'ptagx', 'ptagadd')}
-    <div class="field"><label>Infos</label><textarea id="tInfo">${esc(d.info)}</textarea></div>
-    <div class="field"><div class="lab"><span>Checklist${pr.n?' · '+pr.d+'/'+pr.n:''}</span></div>
+    <div class="field"><div class="lab"><span>Next steps${pr.n?' · '+pr.d+'/'+pr.n:''}</span></div>
       ${pr.n?bar(pr):''}
-      ${d.checklist.map((it,i)=>`
-      <div class="li${it.done?' done':''}"><span class="ck${it.done?' on':''}" data-pckt="${i}">${it.done?'✓':''}</span>
-        <input class="t" id="tCk${i}" value="${esc(it.text)}"><span class="x" data-pckx="${i}">×</span></div>`).join('')}
-      <div class="li"><span class="ck" style="opacity:.35"></span><input id="tCkIn" value="${esc(d.ckIn)}" placeholder="Add an item" enterkeyhint="done"></div>
+      ${d.steps.map((s,i)=>`
+      <div class="li${s.done?' done':''}"><span class="ck${s.done?' on':''}" data-pckt="${i}">${s.done?'✓':''}</span>
+        <input class="t" id="tSt${i}" value="${esc(s.text)}"><input class="d" type="date" id="tSd${i}" value="${esc(s.due)}"><span class="x" data-pckx="${i}">×</span></div>`).join('')}
+      <div class="li"><span class="ck" style="opacity:.35"></span><input id="tStIn" value="${esc(d.stIn)}" placeholder="Add a step" enterkeyhint="done"></div>
     </div>
-    <div class="field"><div class="lab"><span>Reminders</span><button class="gbtn" data-prmadd="1">+</button></div>
-      ${d.reminders.map((r,i)=>`
-      <div class="li${r.done?' done':''}"><span class="ck${r.done?' on':''}" data-prmt="${i}">${r.done?'✓':''}</span>
-        <input class="d" type="date" id="tRmD${i}" value="${esc(r.date)}"><input class="t" id="tRmT${i}" value="${esc(r.text)}"><span class="x" data-prmx="${i}">×</span></div>`).join('')}
+    <div class="field"><div class="lab"><span>Updates</span></div>
+      <div class="addupd"><textarea id="tUpIn" placeholder="What happened…">${esc(d.upIn)}</textarea><button class="btn primary" data-pupadd="1">Add</button></div>
+      ${d.updates.map((u,i)=>`
+      <div class="li" style="align-items:flex-start"><span class="when" style="flex:0 0 52px;padding-top:6px">${esc(u.date ? dLabel(u.date) : '')}</span>
+        <textarea id="tUp${i}" style="min-height:40px">${esc(u.text)}</textarea><span class="x" data-pupx="${i}" style="padding-top:5px">×</span></div>`).join('')}
     </div>
     <div class="field"><div class="lab"><span>Costs</span><button class="gbtn" data-pcoadd="1">+</button></div>
       ${d.costs.map((c,i)=>`
@@ -584,13 +687,13 @@ function screenEdit(){
         <button class="chip on sm" data-pcocur="${i}|${c.cur==='EUR'?'USD':'EUR'}">${SYM[c.cur]}</button><span class="x" data-pcox="${i}">×</span></div>`).join('')}
       ${Object.keys(tot).length?`<div class="tot" style="padding-right:26px">${Object.keys(tot).map((c)=>`<span>${esc(money(tot[c], c))}</span>`).join('')}</div>`:''}
     </div>
-    <div class="switch" data-pweek="1"><span class="track${d.week?' on':''}"></span><span>This week</span></div>
     <div class="closebar">
       ${e.id?`<button class="btn danger${e.delArm?' arm':''}" data-pdel="1">${e.delArm?'Delete?':'Delete'}</button>`:''}
       <button class="btn close" data-eclose="1">Close</button>
     </div>
   </div>`;
 }
+
 
 /* ---------------------------------------------------- a bookmark's widget --*/
 function bmSheet(){
@@ -710,7 +813,7 @@ function wire(){
     alert('Browser menu › Install app (or Add to Home Screen).'); });
 
   /* the list - unless a drag just happened, a row opens its page */
-  on('topen', (id)=>{ if (state.dragged) { state.dragged = false; return; } state.view = id; state.statPick = false; state.fopen = false; render(); });
+  on('topen', (id)=>{ if (state.dragged) { state.dragged = false; return; } state.view = id; state.updDraft = ''; state.statPick = false; state.fopen = false; render(); });
   on('tnew', ()=>{ state.fopen = false; openEditor(null); });
   on('tdrag', ()=>{});
   document.querySelectorAll('[data-tdrag]').forEach((el)=>{
@@ -749,6 +852,7 @@ function wire(){
     if (id===orderKey() && id!=='all') { const b = bmById(id); state.bmEdit = { id, name:b.name, filter:b.filter, fresh:true }; render(); state.bmEdit.fresh = false; return; }
     store.bm = id; const b = bmById(id); store.filter = b && id!=='all' ? clone(b.filter) : blankFilter(); state.fopen = false; save(); render(); });
   on('bmnew', ()=>{ state.bmEdit = { id:null, name:'', filter:clone(curFilter()), fresh:true }; state.focus = 'bmName'; render(); state.bmEdit.fresh = false; });
+  on('bmsort', (v)=>{ const b = ensureOrder(orderKey()); b.sort = v; b.updated = NOW(); commit('B:'+b.id); });
   on('bmupd', ()=>{ const b = activeBm(); if (!b) return; b.filter = clone(curFilter()); b.updated = NOW(); commit('B:'+b.id); });
   if (state.bmEdit) {
     const m = state.bmEdit, n = document.getElementById('bmName');
@@ -760,7 +864,7 @@ function wire(){
       if (!name) { m.msg = 'A name first.'; render(); return; }
       if (bmLive().some((x)=>x.id!==m.id && same(x.name, name))) { m.msg = 'There is one by that name.'; render(); return; }
       let b = m.id ? bmById(m.id) : null;
-      if (!b) { b = { id:uid('b'), name, filter:clone(m.filter), order:[], updated:'', deleted:'' };
+      if (!b) { b = newBm(uid('b'), name, clone(m.filter), sortOf());
         /* it starts in the order the list shows now */
         b.order = shownTasks().map((t)=>t.id); store.bookmarks.push(b); store.bm = b.id; }
       b.name = name; b.updated = NOW(); state.bmEdit = null; commit('B:'+b.id); });
@@ -772,11 +876,14 @@ function wire(){
   /* the task page */
   const vt = state.view ? store.tasks.find((x)=>x.id===state.view) : null;
   if (vt) {
-    on('vclose', ()=>{ state.view = null; state.statPick = false; render(); });
+    on('vclose', ()=>{ state.view = null; state.statPick = false; state.updDraft = ''; render(); });
     on('tedit', (id)=>openEditor(id));
     on('vstat', ()=>{ state.statPick = !state.statPick; render(); });
     on('vset', (s)=>{ setStatus(vt, s); vt.updated = NOW(); state.statPick = false; commit('T:'+vt.id); });
-    on('vck', (i)=>{ const it = vt.checklist[+i]; if (!it) return; it.done = !it.done; vt.updated = NOW(); commit('T:'+vt.id); });
+    on('vck', (i)=>{ const s = vt.steps[+i]; if (!s) return; s.done = !s.done; vt.updated = NOW(); commit('T:'+vt.id); });
+    const vu = document.getElementById('vUpd');
+    if (vu) vu.oninput = () => { state.updDraft = vu.value; };
+    on('vupd', ()=>{ if (!addUpdate(vt, state.updDraft)) return; state.updDraft = ''; vt.updated = NOW(); commit('T:'+vt.id); });
   }
 
   /* the editor: every change kept at once */
@@ -787,7 +894,6 @@ function wire(){
     const field = (id, set) => { const el = document.getElementById(id);
       if (el) el.oninput = () => { set(el.value); const had = !!E.id; keepDraft(true); if (E.delArm || had !== !!E.id) { E.delArm = false; E.focus = id; render(); } }; return el; };
     field('tName', (v)=>{ d.name = v; });
-    field('tInfo', (v)=>{ d.info = v; });
     /* tags and assignees: Enter (or a comma) makes a capsule */
     const settleBox = (field_, inKey) => { for (const x of list(d[inKey])) if (!d[field_].some((h)=>same(h, x))) d[field_].push(x); d[inKey] = ''; };
     const box = (id, field_, inKey) => { const el = document.getElementById(id); if (!el) return;
@@ -801,29 +907,31 @@ function wire(){
     on('ptagadd', (k)=>{ if (!d.tags.some((h)=>same(h, k))) d.tags.push(k); redraw(); });
     on('pasgadd', (k)=>{ if (!d.assignees.some((h)=>same(h, k))) d.assignees.push(k); redraw(); });
     on('pstat', (s)=>{ d.status = s; redraw(); });
-    /* the checklist: Enter in the last line adds the item, ready for the next */
-    d.checklist.forEach((it, i) => field('tCk'+i, (v)=>{ it.text = v; }));
-    const ck = document.getElementById('tCkIn');
-    if (ck) { ck.oninput = () => { d.ckIn = ck.value; };
-      ck.onkeydown = (e) => { if (e.key!=='Enter') return; if (e.preventDefault) e.preventDefault();
-        const v = (d.ckIn||'').trim(); if (v) d.checklist.push({ done:false, text:v }); d.ckIn = ''; redraw('tCkIn'); }; }
-    on('pckt', (i)=>{ const it = d.checklist[+i]; if (it) it.done = !it.done; redraw(); });
-    on('pckx', (i)=>{ d.checklist.splice(+i, 1); redraw(); });
-    /* reminders */
-    d.reminders.forEach((r, i) => { field('tRmD'+i, (v)=>{ r.date = v; }); field('tRmT'+i, (v)=>{ r.text = v; }); });
-    on('prmadd', ()=>{ d.reminders.push({ done:false, date:TODAY(), text:'' }); redraw('tRmT'+(d.reminders.length-1)); });
-    on('prmt', (i)=>{ const r = d.reminders[+i]; if (r) r.done = !r.done; redraw(); });
-    on('prmx', (i)=>{ d.reminders.splice(+i, 1); redraw(); });
+    /* the next steps: Enter in the last line adds one, ready for the next;
+       each can take a due date */
+    d.steps.forEach((s, i) => { field('tSt'+i, (v)=>{ s.text = v; }); field('tSd'+i, (v)=>{ s.due = v; }); });
+    const st = document.getElementById('tStIn');
+    if (st) { st.oninput = () => { d.stIn = st.value; };
+      st.onkeydown = (e) => { if (e.key!=='Enter') return; if (e.preventDefault) e.preventDefault();
+        const v = (d.stIn||'').trim(); if (v) d.steps.push({ done:false, text:v, due:'' }); d.stIn = ''; redraw('tStIn'); }; }
+    on('pckt', (i)=>{ const s = d.steps[+i]; if (s) s.done = !s.done; redraw(); });
+    on('pckx', (i)=>{ d.steps.splice(+i, 1); redraw(); });
+    /* updates: a new one dated today goes on top; the older ones edited in place */
+    d.updates.forEach((u, i) => field('tUp'+i, (v)=>{ u.text = v; }));
+    const up = document.getElementById('tUpIn');
+    if (up) up.oninput = () => { d.upIn = up.value; };
+    on('pupadd', ()=>{ if (addUpdate(d, d.upIn)) d.upIn = ''; redraw(); });
+    on('pupx', (i)=>{ d.updates.splice(+i, 1); redraw(); });
     /* costs: the currency of the last line is the one a new line starts in */
     d.costs.forEach((c, i) => { field('tCoN'+i, (v)=>{ c.name = v; }); field('tCoA'+i, (v)=>{ c.amount = v; }); });
     on('pcoadd', ()=>{ const last = d.costs[d.costs.length-1]; d.costs.push({ name:'', amount:'', cur: last ? last.cur : 'EUR' }); redraw('tCoN'+(d.costs.length-1)); });
     on('pcocur', (v)=>{ const [i, c] = v.split('|'); if (d.costs[+i]) d.costs[+i].cur = c; redraw(); });
     on('pcox', (i)=>{ d.costs.splice(+i, 1); redraw(); });
-    on('pweek', ()=>{ d.week = !d.week; redraw(); });
     /* Close: what is half-typed counts; back to the task's page (or the
        list, when nothing was ever named) */
     on('eclose', ()=>{ settleBox('tags', 'tagIn'); settleBox('assignees', 'asgIn');
-      const v = (d.ckIn||'').trim(); if (v) d.checklist.push({ done:false, text:v }); d.ckIn = '';
+      const v = (d.stIn||'').trim(); if (v) d.steps.push({ done:false, text:v, due:'' }); d.stIn = '';
+      if (addUpdate(d, d.upIn)) d.upIn = '';
       keepDraft(true); state.view = E.id; state.edit = null; render(); });
     on('pdel', ()=>{ if (!E.delArm) { E.delArm = true; render(); return; }
       const t = store.tasks.find((x)=>x.id===E.id); state.edit = null; state.view = null;
