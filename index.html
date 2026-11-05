@@ -203,6 +203,9 @@
   .addupd{display:flex;gap:6px;align-items:flex-end;margin-bottom:6px}
   .addupd textarea{min-height:44px}
   .addupd .btn{flex:0 0 auto;padding:8px 12px}
+  .lnk{color:var(--accent2);text-decoration:none;font-size:13.5px;overflow-wrap:anywhere;flex:1;min-width:0}
+  .li input.t{flex:1 1 0}
+  .li input.u{flex:1.4 1 0}
   .upd{display:flex;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
   .upd .when{flex:0 0 46px;padding-top:2px}
   .upd .info{flex:1;min-width:0}
@@ -216,9 +219,9 @@
   <div id="tabs"></div>
 </div>
 
-<script src="backend.js?v=4"></script>
+<script src="backend.js?v=5"></script>
 <script>
-const APP_VERSION="4";
+const APP_VERSION="5";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
@@ -251,7 +254,7 @@ const weekEnd = () => { const d = new Date(); d.setDate(d.getDate() + (7 - (d.ge
 const uid = (p) => (p||'t') + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const live = () => store.tasks.filter((t)=>!t.deleted);
 const blank = (status) => ({ id:'', name:'', status:status||'Todo', created:'', updated:'', doneOn:'',
-  steps:[], updates:[], tags:[], assignees:[], costs:[], deleted:'' });
+  steps:[], updates:[], links:[], tags:[], assignees:[], costs:[], deleted:'' });
 const progress = (t) => { const n = t.steps.length, d = t.steps.filter((i)=>i.done).length; return { n, d, pct: n ? Math.round(d*100/n) : 0 }; };
 /* v1-v2 kept a checklist and reminders apart, a note in Infos and a This
    week switch. Now: the checklist and the reminders are the next steps (a
@@ -259,6 +262,7 @@ const progress = (t) => { const n = t.steps.length, d = t.steps.filter((i)=>i.do
    dated the day the task last changed, and This week is any task with a
    step due this week. Nothing typed is lost. */
 function migrateTask(t){
+  if (t && !Array.isArray(t.links)) t.links = [];           // links came in v5: none yet, nothing to send
   if (!t || Array.isArray(t.steps) && Array.isArray(t.updates) && !('checklist' in t) && !('reminders' in t) && !('info' in t) && !('week' in t)) return false;
   t.steps = (t.steps||[]).concat((t.checklist||[]).map((i)=>({ done:!!i.done, text:i.text||'', due:'' })),
     (t.reminders||[]).map((r)=>({ done:!!r.done, text:r.text||'', due:r.date||'' })));
@@ -268,6 +272,12 @@ function migrateTask(t){
 }
 /* The step that comes next: the earliest due one not done. */
 const nextDue = (t) => { let d = ''; for (const s of t.steps) if (!s.done && s.due && (!d || s.due < d)) d = s.due; return d; };
+/* A link as typed: an address with no scheme gets https://; only web
+   addresses open, so a link is never anything but a page. */
+const linkUrl = (u) => { const v = String(u||'').trim(); if (!v) return ''; return /^[a-z][a-z0-9+.-]*:/i.test(v) ? v : 'https://' + v.replace(/^\/+/, ''); };
+const safeUrl = (u) => /^https?:\/\//i.test(u) ? u : '';
+/* what a link shows when it has no label: the site and the path, short */
+const linkText = (l) => l.label || String(l.url).replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
 /* This week: a step not done, due by Sunday - the late ones too. */
 const dueThisWeek = (t) => { const d = nextDue(t); return !!d && d <= weekEnd(); };
 const dueClass = (d) => !d ? '' : d < TODAY() ? 'late' : d <= weekEnd() ? 'due' : '';
@@ -305,7 +315,7 @@ const blankFilter = () => ({ q:'', inc:[], exc:[] });
 const valuesOf = (t, kind) => kind==='status' ? [t.status] : kind==='tag' ? t.tags : kind==='due' ? dueOf(t) : t.assignees;
 function matches(t, f){
   const q = String(f.q||'').toLowerCase().split(/\s+/).filter(Boolean);
-  if (q.length) { const hay = [t.name, t.updates.map((u)=>u.text).join(' '), t.tags.join(' '), t.assignees.join(' '), t.steps.map((i)=>i.text).join(' ')].join(' ').toLowerCase();
+  if (q.length) { const hay = [t.name, t.updates.map((u)=>u.text).join(' '), t.links.map((l)=>l.label+' '+l.url).join(' '), t.tags.join(' '), t.assignees.join(' '), t.steps.map((i)=>i.text).join(' ')].join(' ').toLowerCase();
     if (!q.every((w)=>hay.includes(w))) return false; }
   const has = (e) => { const v = valuesOf(t, e.kind); return e.name===NONE ? !v.length : v.some((x)=>same(x, e.name)); };
   for (const [kind] of KINDS) { const inc = f.inc.filter((e)=>e.kind===kind); if (inc.length && !inc.some(has)) return false; }
@@ -394,7 +404,7 @@ if (!store.bookmarks.some((b)=>b.id==='week')) {
    Bookmarks: one row per list; the filter one line per part
    (Search: paint / + Status: Todo / - Tag: garden), how it sorts, the order
    as task ids. */
-const TASK_HEADERS = ['Id','Name','Status','Created','Updated','Done on','Tags','Assignees','Next steps','Updates','Costs','Deleted'];
+const TASK_HEADERS = ['Id','Name','Status','Created','Updated','Done on','Tags','Assignees','Next steps','Updates','Links','Costs','Deleted'];
 const LEGACY = ['Checklist','Reminders','Info','This week'];
 const BM_HEADERS = ['Id','Name','Filter','Sort','Order','Updated','Deleted'];
 const lines = (s) => String(s==null?'':s).split(/\r?\n/).map((x)=>x.trim()).filter(Boolean);
@@ -417,6 +427,7 @@ function taskRow(t){
   return [t.id, t.name, t.status, t.created, t.updated, t.doneOn||'', t.tags.join(', '), t.assignees.join(', '),
     t.steps.map(stepLine).join('\n'),
     t.updates.map((u)=>(u.date ? u.date + ': ' : '') + u.text).join('\n'),
+    t.links.map((l)=>(l.label ? l.label + ' ' : '') + l.url).join('\n'),
     t.costs.map((c)=>(c.amount===''||c.amount==null?'':(+c.amount).toFixed(2)+' ')+c.cur+(c.name?' '+c.name:'')).join('\n'),
     t.deleted||''].concat((store.legacyCols || []).map(()=>''));
 }
@@ -428,6 +439,8 @@ function readTask(o){
     id:g('Id'), name:g('Name'), status:st, created:g('Created'), updated:g('Updated'), doneOn:g('Done on').slice(0,10),
     tags:list(g('Tags')), assignees:list(g('Assignees')),
     steps:readSteps(g('Next steps')).concat(readSteps(g('Checklist')).map((s)=>({ ...s, due:'' })), readSteps(g('Reminders'))),
+    links:lines(g('Links')).map((l)=>{ const m = /(https?:\/\/\S+|www\.\S+)/i.exec(l);
+      return m ? { label:(l.slice(0, m.index) + l.slice(m.index + m[0].length)).replace(/\s+/g, ' ').trim(), url:linkUrl(m[1]) } : { label:'', url:linkUrl(l) }; }),
     updates:readUpdates(g('Updates')).concat(g('Info').trim() ? [{ date:g('Updated').slice(0,10), text:g('Info').trim() }] : []),
     /* the currency before or after the amount, as a sign or a code */
     costs:lines(g('Costs')).map((l)=>{ const m = /^(€|\$)?\s*(-?[\d.,]+)?\s*(EUR|USD|€|\$)?\s*(.*)$/i.exec(l);
@@ -594,6 +607,8 @@ function screenTask(){
     ${p.n ? `<div class="sec"><span>Next steps</span><span>${p.d}/${p.n}</span></div>${bar(p)}
       ${t.steps.map((s,i)=>`<div class="vli${s.done?' done':''}"><span class="ck${s.done?' on':''}" data-vck="${i}">${s.done?'✓':''}</span><span class="t">${esc(s.text)}</span>${
         s.due ? `<span class="when ${s.done?'':dueClass(s.due)}">${esc(dLabel(s.due))}</span>` : ''}</div>`).join('')}` : ''}
+    ${t.links.length ? `<div class="sec">Links</div>${t.links.map((l)=>{ const u = safeUrl(l.url);
+      return `<div class="vli">${u ? `<a class="lnk" href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(linkText(l))}</a>` : `<span class="t">${esc(linkText(l))}</span>`}</div>`; }).join('')}` : ''}
     <div class="sec">Updates</div>
     <div class="addupd"><textarea id="vUpd" placeholder="What happened…">${esc(state.updDraft||'')}</textarea>
       <button class="btn primary" data-vupd="1">Add</button></div>
@@ -625,7 +640,7 @@ function openEditor(id){
     const f = curFilter(), st = f.inc.filter((e)=>e.kind==='status');
     if (st.length===1) d.status = st[0].name;
     for (const e of f.inc) if (e.name!==NONE) { if (e.kind==='tag') d.tags.push(e.name); if (e.kind==='person') d.assignees.push(e.name); } }
-  state.edit = { id: t ? t.id : null, d:Object.assign(d, { tagIn:'', asgIn:'', stIn:'', upIn:'' }), delArm:false, focus: t ? null : 'tName' };
+  state.edit = { id: t ? t.id : null, d:Object.assign(d, { tagIn:'', asgIn:'', stIn:'', upIn:'', lkIn:'' }), delArm:false, focus: t ? null : 'tName' };
   state.view = null; state.statPick = false;
   render();
 }
@@ -635,6 +650,7 @@ function cleaned(d){
     name:d.name.trim(), tags:d.tags.slice(), assignees:d.assignees.slice(),
     steps:d.steps.map((s)=>({ done:s.done, text:s.text.trim(), due:s.due||'' })).filter((s)=>s.text || s.due),
     updates:d.updates.map((u)=>({ date:u.date, text:u.text.replace(/\s+$/, '') })).filter((u)=>u.text.trim()),
+    links:d.links.map((l)=>({ label:l.label.trim(), url:linkUrl(l.url) })).filter((l)=>l.url),
     costs:d.costs.map((c)=>{ const v = num(c.amount); return { name:c.name.trim(), amount: v==null ? '' : r2(v), cur:c.cur }; }).filter((c)=>c.name || c.amount!==''),
   };
 }
@@ -683,6 +699,11 @@ function screenEdit(){
       ${d.updates.map((u,i)=>`
       <div class="li" style="align-items:flex-start"><span class="when" style="flex:0 0 52px;padding-top:6px">${esc(u.date ? dLabel(u.date) : '')}</span>
         <textarea id="tUp${i}" style="min-height:40px">${esc(u.text)}</textarea><span class="x" data-pupx="${i}" style="padding-top:5px">×</span></div>`).join('')}
+    </div>
+    <div class="field"><div class="lab"><span>Links</span></div>
+      ${d.links.map((l,i)=>`
+      <div class="li"><input class="u" id="tLkU${i}" value="${esc(l.url)}" inputmode="url" autocapitalize="off" autocorrect="off" placeholder="Address"><input class="t" id="tLkL${i}" value="${esc(l.label)}" placeholder="Label"><span class="x" data-plkx="${i}">×</span></div>`).join('')}
+      <div class="li"><input id="tLkIn" value="${esc(d.lkIn)}" placeholder="Paste a link" inputmode="url" autocapitalize="off" autocorrect="off" enterkeyhint="done"></div>
     </div>
     <div class="field"><div class="lab"><span>Costs</span><button class="gbtn" data-pcoadd="1">+</button></div>
       ${d.costs.map((c,i)=>`
@@ -928,6 +949,13 @@ function wire(){
     if (up) up.oninput = () => { d.upIn = up.value; };
     on('pupadd', ()=>{ if (addUpdate(d, d.upIn)) d.upIn = ''; redraw(); });
     on('pupx', (i)=>{ d.updates.splice(+i, 1); redraw(); });
+    /* links: paste (or type) one and press Enter; a label can follow */
+    d.links.forEach((l, i) => { field('tLkU'+i, (v)=>{ l.url = v; }); field('tLkL'+i, (v)=>{ l.label = v; }); });
+    const lk = document.getElementById('tLkIn');
+    if (lk) { lk.oninput = () => { d.lkIn = lk.value; };
+      lk.onkeydown = (e) => { if (e.key!=='Enter') return; if (e.preventDefault) e.preventDefault();
+        const v = (d.lkIn||'').trim(); if (v) d.links.push({ label:'', url:v }); d.lkIn = ''; redraw('tLkL'+(d.links.length-1)); }; }
+    on('plkx', (i)=>{ d.links.splice(+i, 1); redraw(); });
     /* costs: the currency of the last line is the one a new line starts in */
     d.costs.forEach((c, i) => { field('tCoN'+i, (v)=>{ c.name = v; }); field('tCoA'+i, (v)=>{ c.amount = v; }); });
     on('pcoadd', ()=>{ const last = d.costs[d.costs.length-1]; d.costs.push({ name:'', amount:'', cur: last ? last.cur : 'EUR' }); redraw('tCoN'+(d.costs.length-1)); });
@@ -938,6 +966,7 @@ function wire(){
     on('eclose', ()=>{ settleBox('tags', 'tagIn'); settleBox('assignees', 'asgIn');
       const v = (d.stIn||'').trim(); if (v) d.steps.push({ done:false, text:v, due:'' }); d.stIn = '';
       if (addUpdate(d, d.upIn)) d.upIn = '';
+      const lv = (d.lkIn||'').trim(); if (lv) d.links.push({ label:'', url:lv }); d.lkIn = '';
       keepDraft(true); state.view = E.id; state.edit = null; render(); });
     on('pdel', ()=>{ if (!E.delArm) { E.delArm = true; render(); return; }
       const t = store.tasks.find((x)=>x.id===E.id); state.edit = null; state.view = null;
