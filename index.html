@@ -77,7 +77,7 @@
   nav{position:fixed;bottom:0;left:0;right:0;background:rgba(17,19,26,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
     border-top:1px solid var(--line);display:flex;justify-content:space-around;
     padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:30;}
-  nav button{background:none;border:none;color:var(--muted);font-size:9.5px;display:flex;flex-direction:column;
+  nav button{background:none;border:none;color:var(--muted);font-size:9px;white-space:nowrap;overflow:hidden;display:flex;flex-direction:column;
     align-items:center;gap:3px;cursor:pointer;padding:4px 1px;flex:1;min-width:0;font-family:inherit}
   nav button svg{width:21px;height:21px;display:block;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
   nav button.active{color:var(--accent)}
@@ -219,6 +219,14 @@
   .lnk{color:var(--accent2);text-decoration:none;font-size:13.5px;overflow-wrap:anywhere;flex:1;min-width:0}
   .li input.t{flex:1 1 0}
   .li input.u{flex:1.4 1 0}
+  .li .rp{flex:none;width:24px;height:24px;border-radius:7px;border:1px solid var(--line);background:var(--bg2);color:var(--muted);font-size:13px;line-height:1;padding:0;cursor:pointer;font-family:inherit}
+  .li .rp.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .rept{display:block;font-size:11px;color:var(--accent2);margin-top:1px}
+  .rept.ed{margin:-2px 0 5px 24px;cursor:pointer}
+  .reppanel{margin:0 0 8px 24px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--bg2);display:flex;flex-direction:column;gap:6px}
+  .reppanel .rrow{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:12px}
+  .reppanel .rrow>span:first-child{color:var(--muted);min-width:34px}
+  .reppanel input{width:46px;flex:none;padding:3px 6px;text-align:center}
   .upd{display:flex;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
   .upd .when{flex:0 0 46px;padding-top:2px}
   .upd .info{flex:1;min-width:0}
@@ -233,9 +241,9 @@
 </div>
 <nav id="nav"></nav>
 
-<script src="backend.js?v=7"></script>
+<script src="backend.js?v=8"></script>
 <script>
-const APP_VERSION="7";
+const APP_VERSION="8";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
@@ -271,7 +279,8 @@ const uid = (p) => (p||'t') + Date.now().toString(36) + Math.random().toString(3
 const live = () => store.tasks.filter((t)=>!t.deleted);
 const blank = (status) => ({ id:'', name:'', status:status||'Todo', created:'', updated:'', doneOn:'',
   steps:[], updates:[], links:[], tags:[], assignees:[], costs:[], deleted:'' });
-const progress = (t) => { const n = t.steps.length, d = t.steps.filter((i)=>i.done).length; return { n, d, pct: n ? Math.round(d*100/n) : 0 }; };
+/* the bar counts the steps that end; a repeating one never does */
+const progress = (t) => { const st = t.steps.filter((i)=>!i.repeat), n = st.length, d = st.filter((i)=>i.done).length; return { n, d, pct: n ? Math.round(d*100/n) : 0 }; };
 /* v1-v2 kept a checklist and reminders apart, a note in Infos and a This
    week switch. Now: the checklist and the reminders are the next steps (a
    reminder is a step with its date due), the note is the first update,
@@ -279,9 +288,10 @@ const progress = (t) => { const n = t.steps.length, d = t.steps.filter((i)=>i.do
    step due this week. Nothing typed is lost. */
 function migrateTask(t){
   if (t && !Array.isArray(t.links)) t.links = [];           // links came in v5: none yet, nothing to send
+  if (t && Array.isArray(t.steps)) for (const st of t.steps) { if (!('repeat' in st)) st.repeat = null; if (!('last' in st)) st.last = ''; }   // so did repeating steps
   if (!t || Array.isArray(t.steps) && Array.isArray(t.updates) && !('checklist' in t) && !('reminders' in t) && !('info' in t) && !('week' in t)) return false;
-  t.steps = (t.steps||[]).concat((t.checklist||[]).map((i)=>({ done:!!i.done, text:i.text||'', due:'' })),
-    (t.reminders||[]).map((r)=>({ done:!!r.done, text:r.text||'', due:r.date||'' })));
+  t.steps = (t.steps||[]).concat((t.checklist||[]).map((i)=>({ done:!!i.done, text:i.text||'', due:'', repeat:null, last:'' })),
+    (t.reminders||[]).map((r)=>({ done:!!r.done, text:r.text||'', due:r.date||'', repeat:null, last:'' })));
   t.updates = (t.updates||[]).concat(t.info ? [{ date:String(t.updated||t.created||NOW()).slice(0,10), text:t.info }] : []);
   delete t.checklist; delete t.reminders; delete t.info; delete t.week;
   return true;
@@ -293,9 +303,107 @@ const nextDue = (t) => { let d = ''; for (const s of t.steps) if (!s.done && s.d
 const linkUrl = (u) => { const v = String(u||'').trim(); if (!v) return ''; return /^[a-z][a-z0-9+.-]*:/i.test(v) ? v : 'https://' + v.replace(/^\/+/, ''); };
 const safeUrl = (u) => /^https?:\/\//i.test(u) ? u : '';
 /* what a link shows when it has no label: the site and the path, short */
-const linkText = (l) => l.label || String(l.url).replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
+/* The site a link is on, its name and extension: http://www.hello.com/test is
+   hello.com, docs.google.com is google.com, www.bbc.co.uk/news is bbc.co.uk. */
+function siteOf(u){
+  if (/^[a-z][a-z0-9+.-]*:/i.test(String(u||'').trim()) && !/^https?:\/\//i.test(String(u).trim())) return '';   // not a web address
+  const m =/^(?:[a-z][a-z0-9+.-]*:\/\/)?([^/?#:@]+)/i.exec(String(u||'').trim());
+  if (!m) return '';
+  const parts = m[1].toLowerCase().split('.').filter(Boolean);
+  if (parts.length <= 2 || /^\d+$/.test(parts[parts.length-1])) return parts.join('.');
+  /* a two-part ending (co.uk, com.au, gouv.fr) keeps one more */
+  const two = parts[parts.length-1].length===2 && /^(co|com|net|org|gov|gouv|ac|edu|ne|or)$/.test(parts[parts.length-2]);
+  return parts.slice(two ? -3 : -2).join('.');
+}
+/* what a link shows: its label, else its site */
+const linkText = (l) => l.label || siteOf(l.url) || l.url;
 /* This week: a step not done, due by Sunday - the late ones too. */
 const dueThisWeek = (t) => { const d = nextDue(t); return !!d && d <= weekEnd(); };
+/* ------------------------------------------------------ repeating steps --
+   A step can come back: every N days; every N weeks, on the weekdays picked;
+   every N months, on a day of the month (or the last day), or on a weekday
+   of it (the 2nd Tuesday, the last Friday); every N years, on a day. Ticked,
+   it is not done: the day goes into "last" and the step moves on to its next
+   date - from the date it was due, so one paid late is still owed next time.
+   rule: { n, unit:'day'|'week'|'month'|'year', days:[0-6], by:'date'|'weekday',
+           day:1-31|-1 (last), nth:1-5|-1 (last), wd:0-6, month:1-12 } */
+const WD = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const ORD = (n) => n===-1 ? 'last' : n + (n===1 ? 'st' : n===2 ? 'nd' : n===3 ? 'rd' : 'th');
+const dOf = (s) => { const [y,m,d] = String(s).split('-').map(Number); return new Date(y, m-1, d); };
+const lastDay = (y, m0) => new Date(y, m0+1, 0).getDate();
+/* a rule as kept: only what its unit uses, the rest at rest */
+function canon(r){
+  const c = { n:Math.max(1, Math.min(99, +r.n||1)), unit:r.unit, days:[], by:'date', day:1, nth:1, wd:0, month:1 };
+  if (r.unit==='week') c.days = (r.days||[]).slice().sort((a,b)=>((a+6)%7)-((b+6)%7));
+  if (r.unit==='month') { if (r.by==='weekday') { c.by = 'weekday'; c.nth = r.nth; c.wd = r.wd; } else c.day = r.day; }
+  if (r.unit==='year') { c.day = r.day; c.month = r.month; }
+  return c;
+}
+/* a rule made, or kept, around a date: what it falls on comes from the date */
+function anchored(r, due){
+  const d = dOf(due), dd = d.getDate(), out = { n:Math.max(1, +r.n||1), unit:r.unit, days:(r.days||[]).slice(), by:r.by||'date', day:r.day, nth:r.nth, wd:d.getDay(), month:d.getMonth()+1 };
+  if (out.unit==='week' && !out.days.length) out.days = [d.getDay()];
+  if (out.day!==-1) out.day = dd;
+  if (out.nth!==-1) out.nth = Math.ceil(dd/7);
+  if (out.unit==='year') { out.day = dd; out.by = 'date'; }
+  return canon(out);
+}
+/* the day of the nth weekday (or the last) of a month */
+function nthWeekday(y, m0, nth, wd){
+  if (nth===-1) { const L = lastDay(y, m0); const back = (new Date(y, m0, L).getDay() - wd + 7) % 7; return L - back; }
+  const first = (wd - new Date(y, m0, 1).getDay() + 7) % 7 + 1, day = first + (nth-1)*7;
+  return day <= lastDay(y, m0) ? day : day - 7;      /* a 5th that is not there: the last */
+}
+/* the next date the rule falls on, after `from` */
+function nextOcc(from, r){
+  const f = dOf(from), n = Math.max(1, +r.n||1);
+  if (r.unit==='day') { f.setDate(f.getDate() + n); return ymd(f); }
+  if (r.unit==='week') {
+    const days = (r.days && r.days.length) ? r.days : [f.getDay()];
+    const mon = (d) => { const x = new Date(d); x.setDate(x.getDate() - (x.getDay()+6)%7); x.setHours(12); return x; };
+    const m0 = mon(f);
+    for (let i = 1; i <= 7*n + 7; i++) { const d = new Date(f); d.setDate(d.getDate()+i);
+      const wk = Math.round((mon(d) - m0) / 864e5 / 7);
+      if (wk % n === 0 && days.includes(d.getDay())) return ymd(d); }
+    f.setDate(f.getDate() + 7*n); return ymd(f);
+  }
+  const step = r.unit==='year' ? 12*n : n;
+  for (let k = 0; k <= 12*5*n + 12; k += step) {
+    const t = new Date(f.getFullYear(), (r.unit==='year' ? (+r.month||f.getMonth()+1)-1 : f.getMonth()) + k, 1);
+    const y = t.getFullYear(), m0 = t.getMonth(), L = lastDay(y, m0);
+    const day = r.unit==='month' && r.by==='weekday' ? nthWeekday(y, m0, r.nth||1, r.wd||0) : r.day===-1 ? L : Math.min(+r.day||1, L);
+    const c = new Date(y, m0, day);
+    if (c > f) return ymd(c);
+  }
+  return from;
+}
+/* the rule in words: "every 2 weeks on Mon, Thu", "every month on the 2nd Tue" */
+function repeatText(r){
+  if (!r) return '';
+  const unit = r.unit + (r.n>1 ? 's' : ''), head = 'every ' + (r.n>1 ? r.n + ' ' : '') + unit;
+  if (r.unit==='week') return head + (r.days.length ? ' on ' + r.days.slice().sort((a,b)=>((a+6)%7)-((b+6)%7)).map((d)=>WD[d]).join(', ') : '');
+  if (r.unit==='month') return head + (r.by==='weekday' ? ' on the ' + ORD(r.nth) + ' ' + WD[r.wd] : r.day===-1 ? ' on the last day' : ' on the ' + ORD(r.day));
+  if (r.unit==='year') return head + ' on ' + r.day + ' ' + MON[(r.month||1)-1];
+  return head;
+}
+function readRepeat(txt){
+  const m = /^every\s+(?:(\d+)\s+)?(day|week|month|year)s?(?:\s+on\s+(?:the\s+)?(.+))?$/i.exec(String(txt||'').trim());
+  if (!m) return null;
+  const r = { n:+(m[1]||1), unit:m[2].toLowerCase(), days:[], by:'date', day:1, nth:1, wd:0, month:1 }, on = (m[3]||'').trim();
+  const wdOf = (w) => WD.findIndex((x)=>same(x, String(w).slice(0,3)));
+  if (r.unit==='week') r.days = on.split(/[\s,]+/).map(wdOf).filter((x)=>x>=0);
+  else if (r.unit==='month') { let k;
+    if (/^last day$/i.test(on)) r.day = -1;
+    else if ((k = /^(\d+)(?:st|nd|rd|th)?$/i.exec(on))) r.day = +k[1];
+    else if ((k = /^(\d)(?:st|nd|rd|th)|^(last)/i.exec(on))) { const w = wdOf(on.split(/\s+/)[1]||''); if (w>=0) { r.by = 'weekday'; r.nth = k[2] ? -1 : +k[1]; r.wd = w; } } }
+  else if (r.unit==='year') { const k = /^(\d+)\s+(\w{3})/.exec(on); if (k) { r.day = +k[1]; r.month = Math.max(1, MON.findIndex((x)=>same(x, k[2]))+1); } }
+  return canon(r);
+}
+/* a step ticked: a repeating one moves on, a plain one is done (or not) */
+function tickStep(st){
+  if (st.repeat && !st.done) { st.last = TODAY(); st.due = nextOcc(st.due || TODAY(), st.repeat); return; }
+  st.done = !st.done;
+}
 const dueClass = (d) => !d ? '' : d < TODAY() ? 'late' : d <= weekEnd() ? 'due' : '';
 const r2 = (x) => Math.round(x*100)/100;
 /* an amount as typed: a comma is a decimal point too */
@@ -349,13 +457,23 @@ function matches(t, f){
 const filterKey = (f) => JSON.stringify([String(f.q||'').trim(), f.inc.map((e)=>e.kind+':'+e.name).sort(), f.exc.map((e)=>e.kind+':'+e.name).sort()]);
 const filterOn = (f) => !!(String(f.q||'').trim() || f.inc.length || f.exc.length);
 /* The bottom bar: This week, Next week, and the bookmarks. The two weeks are
-   lists of their own: their filter is fixed (+ Due: This week / Next week);
-   their bookmark records keep only how they sort and their order. */
-const LIST_TABS = [['week', 'This week'], ['nextweek', 'Next week'], ['lists', 'Bookmarks']];
+   lists of their own, and so are Home, Finance and Admin (anything with that
+   tag, in any case): their filter is fixed; their bookmark records keep only
+   how they sort and their order. */
+const FIXED = {
+  week:    { label:'This week', filter:{ q:'', inc:[{ kind:'due', name:'This week' }], exc:[] }, sort:'due' },
+  nextweek:{ label:'Next week', filter:{ q:'', inc:[{ kind:'due', name:'Next week' }], exc:[] }, sort:'due' },
+  home:    { label:'Home',      filter:{ q:'', inc:[{ kind:'tag', name:'home' }], exc:[] },      sort:'custom' },
+  finance: { label:'Finance',   filter:{ q:'', inc:[{ kind:'tag', name:'finance' }], exc:[] },   sort:'custom' },
+  admin:   { label:'Admin',     filter:{ q:'', inc:[{ kind:'tag', name:'admin' }], exc:[] },     sort:'custom' },
+};
+const FIXED_IDS = Object.keys(FIXED);
+const LIST_TABS = FIXED_IDS.map((k)=>[k, FIXED[k].label]).concat([['lists', 'Bookmarks']]);
+const isFixedTab = () => !!FIXED[state.tab];
 const isWeekTab = () => state.tab==='week' || state.tab==='nextweek';
 const isListTab = () => LIST_TABS.some(([k])=>k===state.tab);
-const WEEK_FILTER = { week:{ q:'', inc:[{ kind:'due', name:'This week' }], exc:[] }, nextweek:{ q:'', inc:[{ kind:'due', name:'Next week' }], exc:[] } };
-const curFilter = () => isWeekTab() ? WEEK_FILTER[state.tab] : (store.filter || (store.filter = blankFilter()));
+const WEEK_FILTER = { week:FIXED.week.filter, nextweek:FIXED.nextweek.filter };
+const curFilter = () => isFixedTab() ? FIXED[state.tab].filter : (store.filter || (store.filter = blankFilter()));
 
 /* -------------------------------------------------------------- bookmarks --
    A bookmark is a filter kept under a name, how its list is sorted, and its
@@ -368,8 +486,8 @@ const SORT_LABEL = Object.fromEntries(SORTS);
 const STATUS_RANK = ['Action needed','Blocked','In progress','Todo','Backlog','Done'];
 const bmLive = () => store.bookmarks.filter((b)=>!b.deleted);
 const bmById = (id) => store.bookmarks.find((b)=>b.id===id && !b.deleted) || null;
-const activeBm = () => isWeekTab() ? bmById(state.tab) : (store.bm && store.bm!=='all' && store.bm!=='week' && store.bm!=='nextweek' && bmById(store.bm)) || null;
-const orderKey = () => isWeekTab() ? state.tab : activeBm() ? store.bm : 'all';
+const activeBm = () => isFixedTab() ? bmById(state.tab) : (store.bm && store.bm!=='all' && !FIXED[store.bm] && bmById(store.bm)) || null;
+const orderKey = () => isFixedTab() ? state.tab : activeBm() ? store.bm : 'all';
 const newBm = (id, name, filter, sort) => ({ id, name, filter:filter||blankFilter(), sort:sort||'custom', order:[], updated:'', deleted:'' });
 function ensureOrder(id){
   let b = store.bookmarks.find((x)=>x.id===id);
@@ -416,14 +534,14 @@ function moveTask(from, to){
    with no date, so the sheet's (or its deletion) always wins. */
 for (const t of store.tasks) if (migrateTask(t) && !store.dirty.includes('T:'+t.id)) store.dirty.push('T:'+t.id);
 for (const b of store.bookmarks) if (!b.sort) b.sort = 'custom';
-for (const [id, name] of [['week', 'This week'], ['nextweek', 'Next week']]) {
+for (const id of FIXED_IDS) {
   const b = store.bookmarks.find((x)=>x.id===id);
-  if (!b) { store.bookmarks.push(newBm(id, name, { q:'', inc:[{ kind:'due', name }], exc:[] }, 'due')); store.dirty.push('B:'+id); }
+  if (!b) { store.bookmarks.push(newBm(id, FIXED[id].label, JSON.parse(JSON.stringify(FIXED[id].filter)), FIXED[id].sort)); store.dirty.push('B:'+id); }
   /* they are tabs now: one deleted before comes back */
   else if (b.deleted) { b.deleted = ''; b.updated = new Date().toISOString(); store.dirty.push('B:'+id); }
 }
-/* the bookmarks tab shows All or one of yours; the weeks have their own tabs */
-if (store.bm==='week' || store.bm==='nextweek') store.bm = 'all';
+/* the bookmarks tab shows All or one of yours; the fixed lists have their own tabs */
+if (FIXED[store.bm]) store.bm = 'all';
 if (LIST_TABS.some(([k])=>k===store.tab)) { state.tab = store.tab; state.lastTab = store.tab; }
 
 /* ------------------------------------------------------- the sheet's rows --
@@ -444,9 +562,13 @@ const LEGACY = ['Checklist','Reminders','Info','This week'];
 const BM_HEADERS = ['Id','Name','Filter','Sort','Order','Updated','Deleted'];
 const lines = (s) => String(s==null?'':s).split(/\r?\n/).map((x)=>x.trim()).filter(Boolean);
 const list = (s) => String(s==null?'':s).split(',').map((x)=>x.trim()).filter(Boolean);
-const stepLine = (s) => (s.done?'[x] ':'[ ] ') + (s.due ? s.due + ' ' : '') + s.text;
+/* a repeating step carries its rule at the end: [ ] 2026-12-01 Pay rent (every month on the 1st; last 2026-11-02) */
+const stepLine = (s) => (s.done?'[x] ':'[ ] ') + (s.due ? s.due + ' ' : '') + s.text + (s.repeat ? ' (' + repeatText(s.repeat) + (s.last ? '; last ' + s.last : '') + ')' : '');
 const readSteps = (cell) => lines(cell).map((l)=>{ const m = /^(?:\[([ xX])\]\s*)?(\d{4}-\d{2}-\d{2})?\s*(.*)$/.exec(l);
-  return { done:!!(m[1] && m[1]!==' '), text:m[3]||'', due:m[2]||'' }; });
+  let text = m[3]||'', repeat = null, last = '';
+  const r = /\s*\((every [^()]*?)(?:;\s*last\s+(\d{4}-\d{2}-\d{2}))?\)\s*$/i.exec(text);
+  if (r && (repeat = readRepeat(r[1]))) { text = text.slice(0, r.index); last = r[2]||''; }
+  return { done:!!(m[1] && m[1]!==' ') && !repeat, text, due:m[2]||'', repeat, last }; });
 function readUpdates(cell){
   const out = [];
   for (const l of String(cell==null?'':cell).split(/\r?\n/)) {
@@ -473,7 +595,7 @@ function readTask(o){
   return {
     id:g('Id'), name:g('Name'), status:st, created:g('Created'), updated:g('Updated'), doneOn:g('Done on').slice(0,10),
     tags:list(g('Tags')), assignees:list(g('Assignees')),
-    steps:readSteps(g('Next steps')).concat(readSteps(g('Checklist')).map((s)=>({ ...s, due:'' })), readSteps(g('Reminders'))),
+    steps:readSteps(g('Next steps')).concat(readSteps(g('Checklist')).map((s)=>({ ...s, due:'', repeat:null, last:'' })), readSteps(g('Reminders'))),
     links:lines(g('Links')).map((l)=>{ const m = /(https?:\/\/\S+|www\.\S+)/i.exec(l);
       return m ? { label:(l.slice(0, m.index) + l.slice(m.index + m[0].length)).replace(/\s+/g, ' ').trim(), url:linkUrl(m[1]) } : { label:'', url:linkUrl(l) }; }),
     updates:readUpdates(g('Updates')).concat(g('Info').trim() ? [{ date:g('Updated').slice(0,10), text:g('Info').trim() }] : []),
@@ -602,11 +724,11 @@ function filterChips(f){
 }
 /* the bookmarks along the top: All, This week, then the rest as made */
 /* the bookmarks along the top of the Bookmarks tab: All, then yours as made */
-const BUILT_IN = ['all', 'week', 'nextweek'];
+const BUILT_IN = ['all'].concat(FIXED_IDS);
 const bmShown = () => [{ id:'all', name:'All' }].concat(bmLive().filter((x)=>!BUILT_IN.includes(x.id)));
 function screenTasks(){
   const f = curFilter(), b = activeBm(), ts = shownTasks(), sort = sortOf();
-  const wk = isWeekTab(), changed = wk ? false : b ? filterKey(f) !== filterKey(b.filter) : filterOn(f);
+  const wk = isFixedTab(), changed = wk ? false : b ? filterKey(f) !== filterKey(b.filter) : filterOn(f);
   const nextSort = SORTS[(SORTS.findIndex(([k])=>k===sort)+1) % SORTS.length][0];
   const title = wk ? LIST_TABS.find(([k])=>k===state.tab)[1] : b ? b.name : 'Tasks';
   return `
@@ -642,8 +764,9 @@ function screenTask(){
     ${state.statPick ? `<div class="spick">${STATUSES.filter((s)=>s!==t.status).map((s)=>`<button class="chip sm" data-vset="${esc(s)}">${sdot(s)}${esc(s)}</button>`).join('')}</div>` : ''}
     ${t.assignees.length ? `<div class="sec">Assignees</div><div class="caps">${t.assignees.map((a)=>capOf(a)).join('')}</div>` : ''}
     ${t.tags.length ? `<div class="sec">Tags</div><div class="caps">${t.tags.map((g)=>`<span class="cap">${esc(g)}</span>`).join('')}</div>` : ''}
-    ${p.n ? `<div class="sec"><span>Next steps</span><span>${p.d}/${p.n}</span></div>${bar(p)}
-      ${t.steps.map((s,i)=>`<div class="vli${s.done?' done':''}"><span class="ck${s.done?' on':''}" data-vck="${i}">${s.done?'✓':''}</span><span class="t">${esc(s.text)}</span>${
+    ${t.steps.length ? `<div class="sec"><span>Next steps</span><span>${p.n ? p.d+'/'+p.n : ''}</span></div>${p.n ? bar(p) : ''}
+      ${t.steps.map((s,i)=>`<div class="vli${s.done?' done':''}"><span class="ck${s.done?' on':''}" data-vck="${i}">${s.done?'✓':''}</span><span class="t">${esc(s.text)}${
+        s.repeat ? `<span class="rept">↻ ${esc(repeatText(s.repeat))}${s.last ? ' · last ' + esc(dLabel(s.last)) : ''}</span>` : ''}</span>${
         s.due ? `<span class="when ${s.done?'':dueClass(s.due)}">${esc(dLabel(s.due))}</span>` : ''}</div>`).join('')}` : ''}
     ${t.links.length ? `<div class="sec">Links</div>${t.links.map((l)=>{ const u = safeUrl(l.url);
       return `<div class="vli">${u ? `<a class="lnk" href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(linkText(l))}</a>` : `<span class="t">${esc(linkText(l))}</span>`}</div>`; }).join('')}` : ''}
@@ -677,11 +800,11 @@ function openEditor(id){
     /* a new task in a filtered list starts with what the list asks for */
     const f = curFilter(), st = f.inc.filter((e)=>e.kind==='status');
     if (st.length===1) d.status = st[0].name;
-    for (const e of f.inc) if (e.name!==NONE) { if (e.kind==='tag') d.tags.push(e.name); if (e.kind==='person') d.assignees.push(e.name); }
+    for (const e of f.inc) if (e.name!==NONE) { if (e.kind==='tag') d.tags.push(known('tags').find((k)=>same(k, e.name)) || e.name); if (e.kind==='person') d.assignees.push(e.name); }
     /* made from This week / Next week: a first step due then, so it shows there */
-    if (state.tab==='week') d.steps.push({ done:false, text:'', due:TODAY() });
-    if (state.tab==='nextweek') { const m = new Date(weekEnd()+'T12:00:00'); m.setDate(m.getDate()+1); d.steps.push({ done:false, text:'', due:ymd(m) }); } }
-  state.edit = { id: t ? t.id : null, d:Object.assign(d, { tagIn:'', asgIn:'', stIn:'', upIn:'', lkIn:'' }), delArm:false, focus: t ? null : 'tName' };
+    if (state.tab==='week') d.steps.push({ done:false, text:'', due:TODAY(), repeat:null, last:'' });
+    if (state.tab==='nextweek') { const m = new Date(weekEnd()+'T12:00:00'); m.setDate(m.getDate()+1); d.steps.push({ done:false, text:'', due:ymd(m), repeat:null, last:'' }); } }
+  state.edit = { id: t ? t.id : null, d:Object.assign(d, { tagIn:'', asgIn:'', stIn:'', upIn:'', lkIn:'' }), delArm:false, rep:null, focus: t ? null : 'tName' };
   state.view = null; state.statPick = false;
   render();
 }
@@ -689,7 +812,7 @@ function openEditor(id){
 function cleaned(d){
   return {
     name:d.name.trim(), tags:d.tags.slice(), assignees:d.assignees.slice(),
-    steps:d.steps.map((s)=>({ done:s.done, text:s.text.trim(), due:s.due||'' })).filter((s)=>s.text || s.due),
+    steps:d.steps.map((s)=>({ done:!!s.done && !s.repeat, text:s.text.trim(), due:s.due||'', repeat:s.repeat ? clone(s.repeat) : null, last:s.last||'' })).filter((s)=>s.text || s.due),
     updates:d.updates.map((u)=>({ date:u.date, text:u.text.replace(/\s+$/, '') })).filter((u)=>u.text.trim()),
     links:d.links.map((l)=>({ label:l.label.trim(), url:linkUrl(l.url) })).filter((l)=>l.url),
     costs:d.costs.map((c)=>{ const v = num(c.amount); return { name:c.name.trim(), amount: v==null ? '' : r2(v), cur:c.cur }; }).filter((c)=>c.name || c.amount!==''),
@@ -719,6 +842,26 @@ function boxField(label, field, inId, xAttr, addAttr){
       ${sugg.length?`<div class="sugg">${sugg.map((k)=>`<button class="chip sm add" data-${addAttr}="${esc(k)}">+ ${esc(k)}</button>`).join('')}</div>`:''}
     </div>`;
 }
+/* the repeat of a step: every N, the unit, then what it falls on */
+function repeatPanel(st, i){
+  const r = st.repeat;
+  if (!r) return '';
+  const d = dOf(st.due || TODAY()), dd = d.getDate(), lastWk = dd + 7 > lastDay(d.getFullYear(), d.getMonth());
+  const unitChips = ['day','week','month','year'].map((u)=>`<button class="chip sm${r.unit===u?' on':''}" data-prunit="${u}">${u}${r.n>1?'s':''}</button>`).join('');
+  let on = '';
+  if (r.unit==='week') on = [1,2,3,4,5,6,0].map((w)=>`<button class="chip sm${r.days.includes(w)?' on':''}" data-prwd="${w}">${WD[w]}</button>`).join('');
+  if (r.unit==='month') on = [['date', 'the ' + ORD(dd)], ['weekday', 'the ' + ORD(Math.ceil(dd/7)) + ' ' + WD[d.getDay()]]]
+      .concat(dd === lastDay(d.getFullYear(), d.getMonth()) ? [['lastday', 'the last day']] : [], lastWk ? [['lastwd', 'the last ' + WD[d.getDay()]]] : [])
+      .map(([k, lab])=>{ const cur = r.by==='weekday' ? (r.nth===-1 ? 'lastwd' : 'weekday') : (r.day===-1 ? 'lastday' : 'date');
+        return `<button class="chip sm${cur===k?' on':''}" data-prby="${k}">${esc(lab)}</button>`; }).join('');
+  if (r.unit==='year') on = `<span class="muted" style="font-size:12px">on ${dd} ${MON[d.getMonth()]}</span>`;
+  return `
+      <div class="reppanel">
+        <div class="rrow"><span>Every</span><input id="tRn" inputmode="numeric" value="${r.n}">${unitChips}</div>
+        ${on ? `<div class="rrow"><span>on</span>${on}</div>` : ''}
+        <div class="rrow"><span class="muted" style="flex:1">${esc(repeatText(r))} · next ${esc(dLabel(st.due))}</span><button class="chip sm add" data-proff="${i}">No repeat</button></div>
+      </div>`;
+}
 function screenEdit(){
   const e = state.edit, d = e.d, pr = progress(d), tot = costTotals(d.costs);
   return `
@@ -732,7 +875,8 @@ function screenEdit(){
       ${pr.n?bar(pr):''}
       ${d.steps.map((s,i)=>`
       <div class="li${s.done?' done':''}"><span class="ck${s.done?' on':''}" data-pckt="${i}">${s.done?'✓':''}</span>
-        <input class="t" id="tSt${i}" value="${esc(s.text)}"><input class="d" type="date" id="tSd${i}" value="${esc(s.due)}"><span class="x" data-pckx="${i}">×</span></div>`).join('')}
+        <input class="t" id="tSt${i}" value="${esc(s.text)}"><input class="d" type="date" id="tSd${i}" value="${esc(s.due)}"><button class="rp${s.repeat?' on':''}" data-prep="${i}" aria-label="Repeat">↻</button><span class="x" data-pckx="${i}">×</span></div>
+      ${s.repeat && e.rep!==i ? `<div class="rept ed" data-prep="${i}">↻ ${esc(repeatText(s.repeat))}</div>` : ''}${e.rep===i ? repeatPanel(s, i) : ''}`).join('')}
       <div class="li"><span class="ck" style="opacity:.35"></span><input id="tStIn" value="${esc(d.stIn)}" placeholder="Add a step" enterkeyhint="done"></div>
     </div>
     <div class="field"><div class="lab"><span>Updates</span></div>
@@ -835,10 +979,13 @@ function aboutSheet(){
    back where it was. Every other redraw keeps its place. */
 let lastWhere = null;
 const where = () => state.tab + '|' + (state.view||'') + '|' + (state.edit ? 'e' : '');
-const listWhere = (w) => /^(week|nextweek|lists)\|\|$/.test(w||'');
+const listWhere = (w) => /^[a-z]+\|\|$/.test(w||'') && LIST_TABS.some(([k])=>w===k+'||');
 const ICONS = {
   week:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><circle cx="12" cy="15" r="2.2"/>',
   nextweek:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M9 15h6M13 12.5l2.5 2.5-2.5 2.5"/>',
+  home:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+  finance:'<path d="M12 2v20"/><path d="M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  admin:'<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M8 13h8M8 17h6"/>',
   lists:'<path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.5L5 21V4a1 1 0 0 1 1-1z"/>',
 };
 /* the number on each week: its tasks; red when one of them is late */
@@ -847,7 +994,7 @@ function renderNav(){
   const td = TODAY();
   n.innerHTML = LIST_TABS.map(([k, label])=>{
     let cnt = '';
-    if (k!=='lists') { const ts = live().filter((t)=>matches(t, WEEK_FILTER[k]));
+    if (k==='week' || k==='nextweek') { const ts = live().filter((t)=>matches(t, WEEK_FILTER[k]));
       if (ts.length) cnt = `<span class="cnt${k==='week' && ts.some((t)=>nextDue(t) < td) ? ' late' : ''}">${ts.length}</span>`; }
     return `<button class="${state.tab===k?'active':''}" data-tab="${k}"><span class="ico"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${cnt}</span>${label}</button>`; }).join('');
 }
@@ -966,7 +1113,7 @@ function wire(){
     on('tedit', (id)=>openEditor(id));
     on('vstat', ()=>{ state.statPick = !state.statPick; render(); });
     on('vset', (s)=>{ setStatus(vt, s); vt.updated = NOW(); state.statPick = false; commit('T:'+vt.id); });
-    on('vck', (i)=>{ const s = vt.steps[+i]; if (!s) return; s.done = !s.done; vt.updated = NOW(); commit('T:'+vt.id); });
+    on('vck', (i)=>{ const s = vt.steps[+i]; if (!s) return; tickStep(s); vt.updated = NOW(); commit('T:'+vt.id); });
     const vu = document.getElementById('vUpd');
     if (vu) vu.oninput = () => { state.updDraft = vu.value; };
     on('vupd', ()=>{ if (!addUpdate(vt, state.updDraft)) return; state.updDraft = ''; vt.updated = NOW(); commit('T:'+vt.id); });
@@ -995,13 +1142,30 @@ function wire(){
     on('pstat', (s)=>{ d.status = s; redraw(); });
     /* the next steps: Enter in the last line adds one, ready for the next;
        each can take a due date */
-    d.steps.forEach((s, i) => { field('tSt'+i, (v)=>{ s.text = v; }); field('tSd'+i, (v)=>{ s.due = v; }); });
+    d.steps.forEach((s, i) => { field('tSt'+i, (v)=>{ s.text = v; });
+      /* a new date re-sets what a repeat falls on (the 12th, the 2nd Tue, 12 Nov) */
+      field('tSd'+i, (v)=>{ s.due = v; if (s.repeat && v) s.repeat = anchored(s.repeat, v); }); });
     const st = document.getElementById('tStIn');
     if (st) { st.oninput = () => { d.stIn = st.value; };
       st.onkeydown = (e) => { if (e.key!=='Enter') return; if (e.preventDefault) e.preventDefault();
-        const v = (d.stIn||'').trim(); if (v) d.steps.push({ done:false, text:v, due:'' }); d.stIn = ''; redraw('tStIn'); }; }
-    on('pckt', (i)=>{ const s = d.steps[+i]; if (s) s.done = !s.done; redraw(); });
-    on('pckx', (i)=>{ d.steps.splice(+i, 1); redraw(); });
+        const v = (d.stIn||'').trim(); if (v) d.steps.push({ done:false, text:v, due:'', repeat:null, last:'' }); d.stIn = ''; redraw('tStIn'); }; }
+    on('pckt', (i)=>{ const s = d.steps[+i]; if (s) tickStep(s); redraw(); });
+    /* the repeat: ↻ turns it on (dated today if it had no date) and opens it */
+    on('prep', (i)=>{ const st = d.steps[+i]; if (!st) return;
+      if (!st.repeat) { if (!st.due) st.due = TODAY(); st.repeat = anchored({ n:1, unit:'week', days:[] }, st.due); st.done = false; E.rep = +i; }
+      else E.rep = E.rep===+i ? null : +i;
+      redraw(); });
+    const R = E.rep!=null ? d.steps[E.rep] : null;
+    if (R && R.repeat) {
+      const rn = document.getElementById('tRn');
+      if (rn) rn.oninput = () => { const v = parseInt(rn.value, 10); if (v > 0) { R.repeat.n = Math.min(v, 99); keepDraft(true); } };
+      if (rn) rn.onchange = () => redraw();
+      on('prunit', (u)=>{ R.repeat = anchored({ ...R.repeat, unit:u, days:[], day:R.repeat.day===-1 && u==='month' ? -1 : 0 }, R.due); redraw(); });
+      on('prwd', (w)=>{ const x = +w, ds = R.repeat.days; R.repeat.days = ds.includes(x) ? (ds.length>1 ? ds.filter((y)=>y!==x) : ds) : ds.concat([x]); R.repeat = canon(R.repeat); redraw(); });
+      on('prby', (k)=>{ const dd = dOf(R.due), r = { ...R.repeat, by: k==='weekday' || k==='lastwd' ? 'weekday' : 'date', day: k==='lastday' ? -1 : dd.getDate(), nth: k==='lastwd' ? -1 : Math.ceil(dd.getDate()/7), wd: dd.getDay() }; R.repeat = canon(r); redraw(); });
+      on('proff', ()=>{ R.repeat = null; R.last = ''; E.rep = null; redraw(); });
+    }
+    on('pckx', (i)=>{ d.steps.splice(+i, 1); E.rep = null; redraw(); });
     /* updates: a new one dated today goes on top; the older ones edited in place */
     d.updates.forEach((u, i) => field('tUp'+i, (v)=>{ u.text = v; }));
     const up = document.getElementById('tUpIn');
@@ -1013,7 +1177,7 @@ function wire(){
     const lk = document.getElementById('tLkIn');
     if (lk) { lk.oninput = () => { d.lkIn = lk.value; };
       lk.onkeydown = (e) => { if (e.key!=='Enter') return; if (e.preventDefault) e.preventDefault();
-        const v = (d.lkIn||'').trim(); if (v) d.links.push({ label:'', url:v }); d.lkIn = ''; redraw('tLkL'+(d.links.length-1)); }; }
+        const v = (d.lkIn||'').trim(); if (v) d.links.push({ label:siteOf(linkUrl(v)), url:v }); d.lkIn = ''; redraw('tLkL'+(d.links.length-1)); }; }
     on('plkx', (i)=>{ d.links.splice(+i, 1); redraw(); });
     /* costs: the currency of the last line is the one a new line starts in */
     d.costs.forEach((c, i) => { field('tCoN'+i, (v)=>{ c.name = v; }); field('tCoA'+i, (v)=>{ c.amount = v; }); });
@@ -1023,9 +1187,9 @@ function wire(){
     /* Close: what is half-typed counts; back to the task's page (or the
        list, when nothing was ever named) */
     on('eclose', ()=>{ settleBox('tags', 'tagIn'); settleBox('assignees', 'asgIn');
-      const v = (d.stIn||'').trim(); if (v) d.steps.push({ done:false, text:v, due:'' }); d.stIn = '';
+      const v = (d.stIn||'').trim(); if (v) d.steps.push({ done:false, text:v, due:'', repeat:null, last:'' }); d.stIn = '';
       if (addUpdate(d, d.upIn)) d.upIn = '';
-      const lv = (d.lkIn||'').trim(); if (lv) d.links.push({ label:'', url:lv }); d.lkIn = '';
+      const lv = (d.lkIn||'').trim(); if (lv) d.links.push({ label:siteOf(linkUrl(lv)), url:lv }); d.lkIn = '';
       keepDraft(true); state.view = E.id; state.edit = null; render(); });
     on('pdel', ()=>{ if (!E.delArm) { E.delArm = true; render(); return; }
       const t = store.tasks.find((x)=>x.id===E.id); state.edit = null; state.view = null;
