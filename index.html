@@ -241,9 +241,9 @@
 </div>
 <nav id="nav"></nav>
 
-<script src="backend.js?v=9"></script>
+<script src="backend.js?v=10"></script>
 <script>
-const APP_VERSION="9";
+const APP_VERSION="10";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
@@ -264,8 +264,10 @@ const state = { tab:'week', lastTab:'week', view:null, edit:null, about:null, bm
    progress), its updates (each dated the day it was written), tags,
    assignees, and a cost list in euros or dollars. A deleted task keeps its row, Deleted filled, so a
    phone that still has it cannot bring it back. */
-const STATUSES = ['Backlog','Todo','In progress','Blocked','Action needed','Done'];
-const STATUS_COLOR = { 'Backlog':'#000000', 'Todo':'#8a92a6', 'In progress':'#3b82f6', 'Blocked':'#f87171', 'Action needed':'#fbbf24', 'Done':'#4ade80' };
+const STATUSES = ['Backlog','Todo','In progress','Blocked','Waiting','Done'];
+const STATUS_COLOR = { 'Backlog':'#000000', 'Todo':'#8a92a6', 'In progress':'#3b82f6', 'Blocked':'#f87171', 'Waiting':'#fbbf24', 'Done':'#4ade80' };
+/* a status by its name, in any case; Action needed (up to v9) is Waiting now */
+const statusOf = (v) => { const x = String(v==null?'':v).trim(); return /^action needed$/i.test(x) ? 'Waiting' : STATUSES.find((st)=>same(st, x)) || null; };
 const sdot = (s) => `<span class="sdot${s==='Backlog'?' ring':''}" style="background:${STATUS_COLOR[s]||'#8a92a6'}"></span>`;
 const SYM = { EUR:'€', USD:'$' };
 const NOW = () => new Date().toISOString();
@@ -495,8 +497,8 @@ const curFilter = () => isFixedTab() ? { q:'', inc:FIXED[state.tab].filter.inc.c
    placed shows at the top, newest first, until it is dragged. */
 const SORTS = [['custom','Custom'], ['due','Due date'], ['name','Name'], ['person','Assignee'], ['status','Status']];
 const SORT_LABEL = Object.fromEntries(SORTS);
-/* By status: what needs a hand first. */
-const STATUS_RANK = ['Action needed','Blocked','In progress','Todo','Backlog','Done'];
+/* By status: what is stuck first, then what moves, what waits on someone else, what is still to start. */
+const STATUS_RANK = ['Blocked','In progress','Waiting','Todo','Backlog','Done'];
 const bmLive = () => store.bookmarks.filter((b)=>!b.deleted);
 const bmById = (id) => store.bookmarks.find((b)=>b.id===id && !b.deleted) || null;
 const activeBm = () => isFixedTab() ? bmById(state.tab) : (store.bm && store.bm!=='all' && !FIXED[store.bm] && bmById(store.bm)) || null;
@@ -547,6 +549,10 @@ function moveTask(from, to){
    with no date, so the sheet's (or its deletion) always wins. */
 for (const t of store.tasks) if (migrateTask(t) && !store.dirty.includes('T:'+t.id)) store.dirty.push('T:'+t.id);
 for (const b of store.bookmarks) if (!b.sort) b.sort = 'custom';
+for (const t of store.tasks) if (t.status==='Action needed') { t.status = 'Waiting'; if (!store.dirty.includes('T:'+t.id)) store.dirty.push('T:'+t.id); }
+{ const fix = (f) => { let n = 0; for (const e of (f ? f.inc.concat(f.exc) : [])) if (e.kind==='status' && e.name==='Action needed') { e.name = 'Waiting'; n++; } return n; };
+  for (const b of store.bookmarks) if (fix(b.filter) && !store.dirty.includes('B:'+b.id)) store.dirty.push('B:'+b.id);
+  fix(store.filter); for (const k in (store.tabFilters||{})) fix(store.tabFilters[k]); }
 for (const id of FIXED_IDS) {
   const b = store.bookmarks.find((x)=>x.id===id);
   if (!b) { store.bookmarks.push(newBm(id, FIXED[id].label, JSON.parse(JSON.stringify(FIXED[id].filter)), FIXED[id].sort)); store.dirty.push('B:'+id); }
@@ -601,10 +607,10 @@ function taskRow(t){
     t.costs.map((c)=>(c.amount===''||c.amount==null?'':(+c.amount).toFixed(2)+' ')+c.cur+(c.name?' '+c.name:'')).join('\n'),
     t.deleted||''].concat((store.legacyCols || []).map(()=>''));
 }
-const hasLegacy = (o) => LEGACY.some((k)=>String(o[k]==null?'':o[k]).trim());
+const hasLegacy = (o) => LEGACY.some((k)=>String(o[k]==null?'':o[k]).trim()) || /^\s*action needed\s*$/i.test(String(o.Status==null?'':o.Status));
 function readTask(o){
   const g = (k) => o[k]==null ? '' : String(o[k]);
-  const st = STATUSES.find((s)=>same(s, g('Status'))) || 'Todo';
+  const st = statusOf(g('Status')) || 'Todo';
   return {
     id:g('Id'), name:g('Name'), status:st, created:g('Created'), updated:g('Updated'), doneOn:g('Done on').slice(0,10),
     tags:list(g('Tags')), assignees:list(g('Assignees')),
@@ -627,7 +633,7 @@ function readFilter(s){
     let m = /^search:\s*(.*)$/i.exec(l); if (m) { f.q = m[1]; continue; }
     m = /^([+\-−])\s*(status|due|assignee|tag)s?:\s*(.+)$/i.exec(l); if (!m) continue;
     const kind = KINDS.find(([,lab])=>same(lab, m[2]))[0];
-    const name = kind==='status' ? (STATUSES.find((s)=>same(s, m[3])) || null) : kind==='due' ? (DUES.concat([NONE]).find((s)=>same(s, m[3])) || null) : m[3].trim();
+    const name = kind==='status' ? statusOf(m[3]) : kind==='due' ? (DUES.concat([NONE]).find((s)=>same(s, m[3])) || null) : m[3].trim();
     if (name) (m[1]==='+' ? f.inc : f.exc).push({ kind, name });
   }
   return f;
