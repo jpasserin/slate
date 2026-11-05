@@ -41,6 +41,9 @@
   .card h2{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);
     margin:0 0 6px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:8px;}
   .card h2 .n{color:var(--txt);font-variant-numeric:tabular-nums;margin-left:6px}
+  .card h2 .ttl{display:flex;align-items:center;min-width:0}
+  .bmedit{background:none;border:1px solid var(--line);border-radius:7px;height:22px;width:26px;margin-left:8px;padding:0;font-size:11px;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;flex:none}
   .card h2 .hbtns{display:flex;align-items:center;gap:7px;text-transform:none;letter-spacing:0;font-weight:400}
   .muted{color:var(--muted)}
   .empty{font-size:12.5px;color:var(--muted);padding:8px 0 4px}
@@ -213,9 +216,9 @@
   <div id="tabs"></div>
 </div>
 
-<script src="backend.js?v=3"></script>
+<script src="backend.js?v=4"></script>
 <script>
-const APP_VERSION="3";
+const APP_VERSION="4";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
@@ -560,7 +563,7 @@ function screenTasks(){
     ${changed ? `<button class="chip sm add" data-bmnew="1">+ Bookmark</button>` : ''}
     ${changed && b ? `<button class="chip sm add" data-bmupd="1">Update ${esc(b.name)}</button>` : ''}</div>
   <div class="card">
-    <h2><span>${esc(b ? b.name : 'Tasks')}<span class="n">${ts.length}</span></span>
+    <h2><span class="ttl">${esc(b ? b.name : 'Tasks')}<span class="n">${ts.length}</span>${b ? `<button class="bmedit" data-bmedit="${esc(b.id)}" aria-label="Rename or delete this bookmark">✏️</button>` : ''}</span>
       <span class="hbtns"><button class="chip on sm" data-bmsort="${nextSort}">${esc(SORT_LABEL[sort])}</button>
         <span class="fdrop"><button class="fbtn ${filterOn(f)?'act':''}" data-fopen="${state.fopen?0:1}">🔍</button>${state.fopen?filterMenu(f):''}</span>
         <button class="gbtn" data-tnew="1" aria-label="New task">+</button></span></h2>
@@ -848,8 +851,11 @@ function wire(){
   if (fq) fq.oninput = () => { F.q = fq.value; save(); state.focus = 'fq'; render(); };
 
   /* bookmarks: a tap shows its list; a tap on the one showing opens it */
+  /* a bookmark opens to rename or delete from the ✏️ by its title - or a tap on its chip when it is showing */
+  const openBm = (id) => { const b = bmById(id); if (!b) return; state.fopen = false; state.bmEdit = { id, name:b.name, filter:b.filter, fresh:true }; render(); state.bmEdit.fresh = false; };
+  on('bmedit', openBm);
   on('bm', (id)=>{
-    if (id===orderKey() && id!=='all') { const b = bmById(id); state.bmEdit = { id, name:b.name, filter:b.filter, fresh:true }; render(); state.bmEdit.fresh = false; return; }
+    if (id===orderKey() && id!=='all') { openBm(id); return; }
     store.bm = id; const b = bmById(id); store.filter = b && id!=='all' ? clone(b.filter) : blankFilter(); state.fopen = false; save(); render(); });
   on('bmnew', ()=>{ state.bmEdit = { id:null, name:'', filter:clone(curFilter()), fresh:true }; state.focus = 'bmName'; render(); state.bmEdit.fresh = false; });
   on('bmsort', (v)=>{ const b = ensureOrder(orderKey()); b.sort = v; b.updated = NOW(); commit('B:'+b.id); });
