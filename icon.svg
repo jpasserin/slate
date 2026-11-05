@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- White ground, the family palette: #3b82f6 blue, #4ade80 green, #fbbf24
+       amber, #06101c ink. Three lines of a list: two ticked, one to do. -->
+  <rect width="512" height="512" rx="104" fill="#ffffff"/>
+  <g stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M104 150 L134 180 L188 120" stroke="#4ade80" stroke-width="32"/>
+    <path d="M104 266 L134 296 L188 236" stroke="#3b82f6" stroke-width="32"/>
+    <rect x="108" y="342" width="72" height="72" rx="16" stroke="#06101c" stroke-width="24"/>
+    <path d="M240 152 L408 152" stroke="#06101c" stroke-width="28" opacity=".35"/>
+    <path d="M240 268 L408 268" stroke="#06101c" stroke-width="28" opacity=".35"/>
+    <path d="M240 378 L360 378" stroke="#06101c" stroke-width="28"/>
+  </g>
+  <circle cx="412" cy="378" r="22" fill="#fbbf24"/>
+</svg>
