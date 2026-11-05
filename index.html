@@ -251,9 +251,9 @@
 </div>
 <nav id="nav"></nav>
 
-<script src="backend.js?v=12"></script>
+<script src="backend.js?v=13"></script>
 <script>
-const APP_VERSION="12";
+const APP_VERSION="13";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
@@ -1124,6 +1124,38 @@ function renderNav(){
       if (ts.length) cnt = `<span class="cnt${k==='week' && ts.some((t)=>nextDue(t) < td) ? ' late' : ''}">${ts.length}</span>`; }
     return `<button class="${state.tab===k?'active':''}" data-tab="${k}"><span class="ico"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${cnt}</span>${label}</button>`; }).join('');
 }
+/* A redraw changes the page in place: what is the same stays, node for node,
+   so the field being typed in is never replaced - on a phone, replacing it
+   closes the keyboard (a sync finishing, a search narrowing the list). */
+const FORM = { INPUT:1, TEXTAREA:1, SELECT:1 };
+function morph(a, b){
+  if (a.nodeType !== b.nodeType || a.nodeName !== b.nodeName || (a.nodeType === 1 && (a.id||'') !== (b.id||''))) { a.replaceWith(b); return; }
+  if (a.nodeType !== 1) { if (a.nodeValue !== b.nodeValue) a.nodeValue = b.nodeValue; return; }
+  for (const at of Array.from(a.attributes)) if (!b.hasAttribute(at.name)) a.removeAttribute(at.name);
+  for (const at of Array.from(b.attributes)) if (a.getAttribute(at.name) !== at.value) a.setAttribute(at.name, at.value);
+  /* handlers come from wire(), after; a kept node must not keep one it no longer has */
+  a.onclick = a.oninput = a.onkeydown = a.onchange = a.onpointerdown = null;
+  if (FORM[a.nodeName]) {
+    /* a field shows what was drawn - while typing that is what is typed (every
+       letter goes into the app as it lands), so the field and its caret stay;
+       it changes only when the app changed it (a tag made on Enter empties the box) */
+    if (a.type === 'checkbox') { if (a.checked !== b.checked) a.checked = b.checked; }
+    else if (a.value !== b.value) { const f = a === document.activeElement; a.value = b.value;
+      if (f) try { a.setSelectionRange(a.value.length, a.value.length); } catch (e) { /* not a text field */ } }
+    if (a.nodeName === 'TEXTAREA') return;
+  }
+  morphKids(a, b);
+}
+function morphKids(a, b){
+  const an = Array.from(a.childNodes), bn = Array.from(b.childNodes);
+  bn.forEach((n, i) => { if (i < an.length) morph(an[i], n); else a.appendChild(n); });
+  for (let i = bn.length; i < an.length; i++) an[i].remove();
+}
+function paint(el, html){
+  if (typeof el.firstElementChild === 'undefined' || !el.firstElementChild || typeof document.createElement !== 'function') { el.innerHTML = html; return; }
+  const tmp = document.createElement('div'); tmp.innerHTML = html;
+  morphKids(el, tmp);
+}
 function render(){
   const w = where(), moved = w !== lastWhere, wasList = listWhere(lastWhere);
   if (moved && wasList && typeof window.scrollY === 'number') (state.listY = state.listY || {})[lastWhere] = window.scrollY;
@@ -1138,14 +1170,14 @@ function render(){
   const tabs = document.getElementById('tabs');
   if (!moved && tabs.offsetHeight) tabs.style.minHeight = tabs.offsetHeight + 'px';
   const body = state.tab==='settings' ? screenSettings() : state.edit ? screenEdit() : state.view ? screenTask() : screenTasks();
-  tabs.innerHTML = `<div class="tab">${state.about?aboutSheet():''}${state.bmEdit?bmSheet():''}${body}</div>`;
+  paint(tabs, `<div class="tab">${state.about?aboutSheet():''}${state.bmEdit?bmSheet():''}${body}</div>`);
   wire();
   if (moved && typeof scrollTo==='function') scrollTo({ top: listWhere(w) ? ((state.listY||{})[w]||0) : 0 });
   if (typeof requestAnimationFrame === 'function') requestAnimationFrame(()=>{ tabs.style.minHeight=''; });
   else tabs.style.minHeight='';
   const fo = state.edit ? state.edit.focus : state.focus;
   if (fo) { if (state.edit) state.edit.focus = null; state.focus = null;
-    const f = document.getElementById(fo); if (f && f.focus) { f.focus(); try { const n = String(f.value||'').length; if (f.setSelectionRange) f.setSelectionRange(n, n); } catch (e) {} } }
+    const f = document.getElementById(fo); if (f && f.focus && (typeof document.activeElement === 'undefined' || document.activeElement !== f)) { f.focus(); try { const n = String(f.value||'').length; if (f.setSelectionRange) f.setSelectionRange(n, n); } catch (e) {} } }
 }
 
 /* Throw away the service worker and every cache, then reload from the
