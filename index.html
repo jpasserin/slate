@@ -260,9 +260,9 @@
 </div>
 <nav id="nav"></nav>
 
-<script src="backend.js?v=16"></script>
+<script src="backend.js?v=17"></script>
 <script>
-const APP_VERSION="16";
+const APP_VERSION="17";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
@@ -453,14 +453,16 @@ function setStatus(t, s){ if (s==='Done' && t.status!=='Done') t.doneOn = TODAY(
 const KINDS = [['status','Status'], ['due','Due'], ['person','Assignee'], ['tag','Tag']];
 const KIND_LABEL = Object.fromEntries(KINDS);
 const NONE = '(none)';
-/* Due: when the steps not done are due - This week (by Sunday, the late
-   ones too), Next week (Monday to the Sunday after), Later, or (none). A task
+/* Due: when the steps not done are due - Today (today, the late ones too),
+   This week (by Sunday, today and the late ones too: a week runs Monday to
+   Sunday), Next week (Monday to the Sunday after), Later, or (none). A task
    with steps on several of them is in each: one due this week and one next
    week shows in both lists. */
-const DUES = ['This week', 'Next week', 'Later'];
+const DUES = ['Today', 'This week', 'Next week', 'Later'];
 function dueOf(t){
-  const we = weekEnd(), nwe = nextWeekEnd(), out = new Set();
-  for (const st of t.steps) if (!st.done && st.due) out.add(st.due <= we ? 'This week' : st.due <= nwe ? 'Next week' : 'Later');
+  const td = TODAY(), we = weekEnd(), nwe = nextWeekEnd(), out = new Set();
+  for (const st of t.steps) if (!st.done && st.due) { if (st.due <= td) out.add('Today');
+    out.add(st.due <= we ? 'This week' : st.due <= nwe ? 'Next week' : 'Later'); }
   return DUES.filter((d)=>out.has(d));
 }
 const blankFilter = () => ({ q:'', inc:[], exc:[] });
@@ -482,7 +484,9 @@ const filterOn = (f) => !!(String(f.q||'').trim() || f.inc.length || f.exc.lengt
    tag, in any case): their filter is fixed; their bookmark records keep only
    how they sort and their order. */
 const FIXED = {
-  week:    { label:'This week', filter:{ q:'', inc:[{ kind:'due', name:'This week' }], exc:[] }, sort:'due' },
+  /* This week: its list is Today (due today or late); under it the rest of
+     the week and next week, by day */
+  week:    { label:'This week', title:'Today', filter:{ q:'', inc:[{ kind:'due', name:'Today' }], exc:[] }, sort:'due' },
   /* Coming up: not tasks but their steps - every one not done that has a date */
   nextweek:{ label:'Coming up', filter:{ q:'', inc:[{ kind:'due', name:'This week' }, { kind:'due', name:'Next week' }, { kind:'due', name:'Later' }], exc:[] }, sort:'due', steps:true },
   home:    { label:'Home',      filter:{ q:'', inc:[{ kind:'tag', name:'home' }], exc:[] },      sort:'custom' },
@@ -594,8 +598,8 @@ for (const id of FIXED_IDS) {
   if (!b) { store.bookmarks.push(newBm(id, FIXED[id].label, JSON.parse(JSON.stringify(FIXED[id].filter)), FIXED[id].sort)); store.dirty.push('B:'+id); }
   /* they are tabs now: one deleted before comes back */
   else if (b.deleted) { b.deleted = ''; b.updated = new Date().toISOString(); store.dirty.push('B:'+id); }
-  /* Next week is Coming up since v12 */
-  else if (b.name !== FIXED[id].label) { b.name = FIXED[id].label; b.filter = JSON.parse(JSON.stringify(FIXED[id].filter)); b.updated = new Date().toISOString(); store.dirty.push('B:'+id); }
+  /* Next week is Coming up since v12; This week's own list is Today since v17 */
+  else if (b.name !== FIXED[id].label || JSON.stringify(b.filter && [b.filter.inc, b.filter.exc]) !== JSON.stringify([FIXED[id].filter.inc, FIXED[id].filter.exc])) { b.name = FIXED[id].label; b.filter = JSON.parse(JSON.stringify(FIXED[id].filter)); b.updated = new Date().toISOString(); store.dirty.push('B:'+id); }
 }
 /* the bookmarks tab shows All or one of yours; the fixed lists have their own tabs */
 if (FIXED[store.bm]) store.bm = 'all';
@@ -888,7 +892,7 @@ function screenList(){
   const f = userFilter(), b = activeBm(), ts = shownTasks(), sort = sortOf();
   const wk = isFixedTab(), changed = wk ? false : b ? filterKey(f) !== filterKey(b.filter) : filterOn(f);
   const SS = sortsHere(), nextSort = SS[(SS.findIndex(([k])=>k===sort)+1) % SS.length][0];
-  const title = wk ? LIST_TABS.find(([k])=>k===state.tab)[1] : b ? b.name : 'Tasks';
+  const title = wk ? (FIXED[state.tab] && FIXED[state.tab].title) || LIST_TABS.find(([k])=>k===state.tab)[1] : b ? b.name : 'Tasks';
   return `
   ${wk ? '' : `<div class="bmbar">${bmShown().map((x)=>`<button class="chip sm${orderKey()===x.id?' on':''}" data-bm="${esc(x.id)}">${esc(x.name)}</button>`).join('')}
     ${changed ? `<button class="chip sm add" data-bmnew="1">+ Bookmark</button>` : ''}
@@ -904,22 +908,23 @@ function screenList(){
       <div class="trow${t.status==='Done'?' done':''}${state.dragIdx===i?' lift':''}" data-topen="${esc(t.id)}" data-trow="${i}">${sdot(t.status)}<span class="tn">${esc(t.name)}</span>${
         nd ? `<span class="when ${dueClass(nd)}">${esc(dLabel(nd))}</span>` : ''}${sort==='custom' ? `<span class="drag" data-tdrag="${i}">⠿</span>` : ''}</div>`; }).join('')
       || `<div class="empty">${live().length ? 'Nothing here.' : 'No tasks yet.'}</div>`}</div>
-  </div>${state.tab==='week' ? nextWeekCard() : ''}`;
+  </div>${state.tab==='week' ? dayCard('This week', TODAY(), weekEnd(), 'Nothing else due this week.') + dayCard('Next week', weekEnd(), nextWeekEnd(), 'Nothing due next week.') : ''}`;
 }
-/* Under This week, what next week holds: every task with a step not done due
-   Monday to Sunday next week, by that step's day - your filter on This week
-   narrows it too. A task with steps in both weeks is in both. */
-const nextWeekDue = (t) => { const we = weekEnd(), nwe = nextWeekEnd(); let d = '';
-  for (const st of t.steps) if (!st.done && st.due && st.due > we && st.due <= nwe && (!d || st.due < d)) d = st.due; return d; };
-function nextWeekCard(){
+/* Under Today, the This week tab's other two cards: the rest of this week
+   (tomorrow to Sunday) and next week (Monday to Sunday), each task by its
+   first step not done in that span, shown on the row - your filter on the
+   tab narrows them too. A task with steps in several is in each. */
+const dueIn = (t, lo, hi) => { let d = '';
+  for (const st of t.steps) if (!st.done && st.due && st.due > lo && st.due <= hi && (!d || st.due < d)) d = st.due; return d; };
+function dayCard(title, lo, hi, empty){
   const u = userFilter();
-  const ts = live().filter((t)=>nextWeekDue(t) && matches(t, u)).sort((a,b)=>nextWeekDue(a).localeCompare(nextWeekDue(b)) || byName(a,b));
+  const ts = live().filter((t)=>dueIn(t, lo, hi) && matches(t, u)).sort((a,b)=>dueIn(a, lo, hi).localeCompare(dueIn(b, lo, hi)) || byName(a,b));
   return `
   <div class="card">
-    <h2><span class="ttl">Next week<span class="n">${ts.length}</span></span></h2>
-    <div class="tlist">${ts.map((t)=>`
-      <div class="trow" data-topen="${esc(t.id)}">${sdot(t.status)}<span class="tn">${esc(t.name)}</span><span class="when">${esc(WD[dOf(nextWeekDue(t)).getDay()] + ' ' + dLabel(nextWeekDue(t)))}</span></div>`).join('')
-      || '<div class="empty">Nothing due next week.</div>'}</div>
+    <h2><span class="ttl">${esc(title)}<span class="n">${ts.length}</span></span></h2>
+    <div class="tlist">${ts.map((t)=>{ const d = dueIn(t, lo, hi); return `
+      <div class="trow" data-topen="${esc(t.id)}">${sdot(t.status)}<span class="tn">${esc(t.name)}</span><span class="when">${esc(WD[dOf(d).getDay()] + ' ' + dLabel(d))}</span></div>`; }).join('')
+      || `<div class="empty">${esc(empty)}</div>`}</div>
   </div>`;
 }
 
