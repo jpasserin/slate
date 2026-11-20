@@ -114,6 +114,7 @@
   .btn:disabled{opacity:.45;cursor:default}
   .btn.danger{flex:0 0 auto;background:var(--bg2);border-color:var(--bad);color:var(--bad)}
   .btn.danger.arm{background:var(--bad);color:#fff}
+  .hint{font-size:12.5px;color:var(--muted);line-height:1.45}
   .status{font-size:12.5px;margin-top:6px;font-weight:600}
   .status.ok{color:var(--good)} .status.bad{color:var(--bad)}
 
@@ -260,9 +261,9 @@
 </div>
 <nav id="nav"></nav>
 
-<script src="backend.js?v=17"></script>
+<script src="backend.js?v=18"></script>
 <script>
-const APP_VERSION="17";
+const APP_VERSION="18";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
@@ -813,6 +814,80 @@ function mergeRec(p, base, mine, theirs){
   return rec;
 }
 
+/* ------------------------------------------------------ export, import --
+   Export: every task and every list on this phone (the deleted ones too,
+   so an import cannot bring them back), in one file. The sheet's address
+   and token stay out of it.
+   Import: a file merged into what is here; nothing here is dropped. A task
+   or list this phone lacks is added. One it has, changed: the newer of the
+   two (by when it last changed) gives the name, status, dates, deleted...,
+   and the lists are both sides' - steps (one a text), updates, links,
+   costs, tags, assignees. What changed here goes up to the sheet. */
+function exportData(){
+  return { app:'Slate', format:1, version:APP_VERSION, exported:NOW(),
+    tasks:JSON.parse(JSON.stringify(store.tasks)), bookmarks:JSON.parse(JSON.stringify(store.bookmarks)) };
+}
+function downloadExport(){
+  const blob = new Blob([JSON.stringify(exportData(), null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'slate-export-' + TODAY() + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+const arr = (x) => Array.isArray(x) ? x : [];
+function importTask(t){
+  if (!t || typeof t !== 'object' || !t.id) return null;
+  const x = Object.assign(blank(), t, { id:String(t.id) });
+  for (const k of ['steps','updates','links','tags','assignees','costs']) x[k] = arr(x[k]);
+  migrateTask(x);
+  x.status = statusOf(x.status) || 'Todo';
+  return x;
+}
+function importBm(b){
+  if (!b || typeof b !== 'object' || !b.id) return null;
+  const f = b.filter && typeof b.filter === 'object' ? b.filter : {};
+  return { id:String(b.id), name:String(b.name||''), filter:{ q:String(f.q||''), inc:arr(f.inc), exc:arr(f.exc) },
+    sort:b.sort||'custom', order:arr(b.order).map(String), updated:String(b.updated||''), deleted:String(b.deleted||'') };
+}
+/* the same record, whenever it last changed? */
+const sameRec = (p, a, b) => { const T = TABS[p], u = T.headers().indexOf('Updated'), ra = T.row(a), rb = T.row(b);
+  return ra.every((c, i)=>i===u || String(c)===String(rb[i])); };
+function mergeIn(p, rec, n){
+  const T = TABS[p], all = store[T.key], i = all.findIndex((x)=>x.id===rec.id);
+  if (i < 0) { all.push(rec); markDirty(p+':'+rec.id); n.added++; return; }
+  const here = all[i];
+  if (sameRec(p, here, rec)) { n.same++; return; }
+  const newer = String(rec.updated||'') > String(here.updated||'') ? rec : here, older = newer===rec ? here : rec;
+  const heads = T.headers(), m = T.row(newer), o = T.row(older), out = {};
+  heads.forEach((h, j)=>{ out[h] = MERGE[p][h] ? MERGE[p][h]('', cellOf(m[j]), cellOf(o[j])) : m[j]; });
+  const got = T.read(out);
+  if (p==='B' && FIXED[got.id]) { got.name = FIXED[got.id].label; got.filter = JSON.parse(JSON.stringify(FIXED[got.id].filter)); got.deleted = ''; }
+  if (sameRec(p, here, got)) { n.same++; return; }
+  got.updated = NOW();
+  all[i] = got; markDirty(p+':'+got.id); n.merged++;
+}
+/* a file's text in; how many tasks were added, merged and already here */
+function importData(text){
+  let d;
+  try { d = JSON.parse(text); } catch (e) { throw new Error('Not a Slate export (not JSON).'); }
+  if (!d || typeof d !== 'object' || (!Array.isArray(d.tasks) && !Array.isArray(d.bookmarks))) throw new Error('Not a Slate export (no tasks).');
+  const n = { added:0, merged:0, same:0 }, nb = { added:0, merged:0, same:0 };
+  for (const t of arr(d.tasks).map(importTask).filter(Boolean)) mergeIn('T', t, n);
+  for (const b of arr(d.bookmarks).map(importBm).filter(Boolean)) mergeIn('B', b, nb);
+  save(); syncSoon();
+  return { tasks:n, bookmarks:nb };
+}
+async function importFile(file){
+  if (!file) return;
+  try {
+    const r = importData(await file.text()), t = r.tasks, b = r.bookmarks;
+    state.io = { msg:'Imported · ' + t.added + ' new, ' + t.merged + ' merged, ' + t.same + ' already here'
+      + (b.added + b.merged ? ' · lists: ' + b.added + ' new, ' + b.merged + ' merged' : '') };
+  } catch (e) { state.io = { msg:e.message, bad:true }; }
+  render();
+}
+
 /* A change: keep it, show it, send it. */
 function commit(k, quiet){ markDirty(k); save(); if (!quiet) render(); syncSoon(); }
 
@@ -1128,6 +1203,18 @@ function screenSettings(){
     </div>
     ${st?`<div class="status ${st.bad?'bad':'ok'}">${esc(st.msg)}</div>`:''}
     ${store.dirty.length?`<div class="status bad">${store.dirty.length} waiting</div>`:''}
+  </div>
+  <div class="card">
+    <h2>Your data</h2>
+    <div class="hint">Export saves every task and list on this phone to a file (not the sheet's address or token).
+      Import merges a file in: what this phone lacks is added, a task on both keeps the newer name and status
+      and the steps, updates, links, costs and tags of both. Nothing here is removed.</div>
+    <div class="btnrow" style="margin-top:10px">
+      <button class="btn" data-export="1">Export</button>
+      <button class="btn" data-import="1">Import</button>
+    </div>
+    <input type="file" id="impFile" accept="application/json,.json" style="display:none">
+    ${state.io?`<div class="status ${state.io.bad?'bad':'ok'}">${esc(state.io.msg)}</div>`:''}
   </div>`;
 }
 
@@ -1249,8 +1336,8 @@ function render(){
    network, so a fresh deploy is picked up on the spot. */
 async function hardReload(){
   try {
-    if (navigator.serviceWorker) for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
-    if (typeof caches !== 'undefined') for (const k of await caches.keys()) await caches.delete(k);
+    if (navigator.serviceWorker) for (const r of await navigator.serviceWorker.getRegistrations()) if (r.scope === new URL('./', location.href).href) await r.unregister();
+    if (typeof caches !== 'undefined') for (const k of await caches.keys()) if (k.startsWith('slate-v')) await caches.delete(k);
   } catch (e) { /* nothing to clear */ }
   location.reload();
 }
@@ -1448,6 +1535,10 @@ function wire(){
     catch (e) { state.sync = { msg:e.message, bad:true }; }
     render(); });
   on('bksync', ()=>syncNow(false));
+  on('export', ()=>{ try { downloadExport(); state.io = { msg:'Exported ' + live().length + ' tasks' }; } catch (e) { state.io = { msg:e.message, bad:true }; } render(); });
+  const fi = document.getElementById('impFile');
+  if (fi) fi.onchange = () => { const f = fi.files && fi.files[0]; fi.value = ''; importFile(f); };
+  on('import', ()=>{ if (fi) fi.click(); });
 }
 
 render();

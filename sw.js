@@ -1,7 +1,7 @@
 /* sw.js — cache-first, so the installed app opens without the network.
    CACHE is bumped by deploy.js on every ship; a stale worker would keep
    serving the old app otherwise. */
-const CACHE = 'slate-v17';
+const CACHE = 'slate-v18';
 const FILES = ['./', './index.html', './backend.js', './manifest.webmanifest',
   './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
@@ -19,7 +19,8 @@ self.addEventListener('install', (e) => {
 });
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys()
-    .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+    /* Only this app's own old caches: the other apps share jpasserin.github.io and its cache storage. */
+    .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k.startsWith('slate-v')).map((k) => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', (e) => {
