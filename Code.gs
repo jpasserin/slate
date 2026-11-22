@@ -32,12 +32,17 @@
  * seen is kept in the Config tab (row "app"); a phone older than that is
  * refused, and told to reload, so an out-of-date copy never writes.
  *
+ * PHOTOS (v3). The guides show photos kept in a Drive folder of yours,
+ * "Slate photos" (made the first time it is asked for). The app asks for
+ * one by its file name, behind the same token; nothing in that folder is
+ * ever shared. Only names of letters, digits, - _ . and spaces are read.
+ *
  * DELIBERATELY GENERIC: the app sends tab names, headers and rows; a column
  * this does not know is written all the same, and a column the sheet has but
  * the app did not send is kept. Adding a field never requires a redeploy.
  */
 
-var BACKEND_VERSION = 2;
+var BACKEND_VERSION = 3;
 
 /* ── configure ─────────────────────────────────────────────────────────── */
 var SHEET_ID = 'PUT_YOUR_SPREADSHEET_ID_HERE';
@@ -48,6 +53,7 @@ var TOKEN    = 'PUT_A_LONG_RANDOM_STRING_HERE';
    so the web app has its permissions. */
 function authorize() {
   SpreadsheetApp.openById(SHEET_ID).getName();
+  photoFolder().getName();
   return 'ok';
 }
 
@@ -68,10 +74,26 @@ function handle(e, body) {
     if (action === 'ping') return json({ ok: true, backend: BACKEND_VERSION });
     if (action === 'pull') return json({ ok: true, backend: BACKEND_VERSION, tabs: pull() });
     if (action === 'sync') return json(Object.assign({ ok: true, backend: BACKEND_VERSION }, sync(body)));
+    if (action === 'photo') return json(Object.assign({ ok: true, backend: BACKEND_VERSION }, photo((body && body.name) || p.name)));
     return json({ ok: false, error: 'unknown action: ' + action });
   } catch (err) {
     return json({ ok: false, error: String(err && err.message || err) });
   }
+}
+
+var PHOTO_FOLDER = 'Slate photos';
+function photoFolder() {
+  var it = DriveApp.getFoldersByName(PHOTO_FOLDER);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(PHOTO_FOLDER);
+}
+/* One photo of the folder, by its name: its type and its bytes, base64. */
+function photo(name) {
+  name = String(name || '');
+  if (!/^[\w .-]{1,120}$/.test(name) || /^\.|\.\./.test(name)) throw new Error('bad photo name');
+  var it = photoFolder().getFilesByName(name);
+  if (!it.hasNext()) throw new Error('not in the Drive folder "' + PHOTO_FOLDER + '"');
+  var b = it.next().getBlob();
+  return { name: name, type: b.getContentType(), data: Utilities.base64Encode(b.getBytes()) };
 }
 
 function json(o) {

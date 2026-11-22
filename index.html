@@ -88,6 +88,11 @@
     align-items:center;gap:2px;cursor:pointer;padding:2px 1px;flex:1;min-width:0;font-family:inherit;white-space:nowrap}
   .subnav button svg{width:17px;height:17px;display:block;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .subnav button.active{color:var(--accent)}
+  /* Bookmarks' own row, under Checklist's bar */
+  .subnav2{display:flex;gap:6px;overflow-x:auto;margin:-4px 0 12px;scrollbar-width:none}
+  .subnav2::-webkit-scrollbar{display:none}
+  .subnav2 .chip{flex:1 1 auto;justify-content:center;padding:3px 6px}
+  .subnav2 svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
   nav button .ico{position:relative;display:inline-block}
   nav button .cnt{position:absolute;top:-5px;left:15px;min-width:15px;height:15px;border-radius:8px;background:var(--accent);color:#fff;
     font-size:9px;font-weight:700;line-height:15px;padding:0 3px;text-align:center}
@@ -250,6 +255,52 @@
   .upd{display:flex;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
   .upd .when{flex:0 0 46px;padding-top:2px}
   .upd .info{flex:1;min-width:0}
+  /* Care: four tiles a row, each an icon and a name */
+  .cgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:4px}
+  .ctile{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 2px 8px;background:var(--card2);border:1px solid var(--line);
+    border-radius:14px;cursor:pointer;min-width:0;aspect-ratio:1/1.08;justify-content:center;user-select:none;-webkit-user-select:none}
+  .ctile:active{border-color:var(--accent)}
+  .cgrid.order .ctile{cursor:grab;touch-action:none;border-style:dashed}
+  .ctile.lift{border-color:var(--accent);box-shadow:0 4px 14px rgba(0,0,0,.45);transform:scale(1.04)}
+  .cic{position:relative;display:inline-flex;color:var(--accent2)}
+  .cic svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .cic.big svg{width:30px;height:30px}
+  .calert{position:absolute;top:-3px;right:-5px;width:9px;height:9px;border-radius:50%;background:var(--bad);box-shadow:0 0 0 2px var(--card2)}
+  .cname{font-size:10.5px;line-height:1.2;text-align:center;max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+  .page.care .ptitle{align-items:center}
+  .rd{display:flex;align-items:baseline;gap:8px;padding:6px 0 2px}
+  .rd .k{flex:1;font-size:13.5px} .rd .v{font-weight:700;font-variant-numeric:tabular-nums}
+  .rd .v.good{color:var(--good)} .rd .v.bad{color:var(--bad)}
+  .chart{display:block;width:100%;height:46px;margin:2px 0 6px;background:var(--bg2);border-radius:8px}
+  .lv{display:inline-block;margin-right:8px;font-size:12.5px;color:var(--muted)} .lv b{color:var(--txt)} .lv.bad b{color:var(--bad)}
+  .upd .x{color:var(--muted);cursor:pointer;font-size:13px;flex:none;padding:0 2px}
+  .kv{padding:6px 0;border-bottom:1px solid var(--line)} .kv:last-of-type{border-bottom:0}
+  .kv .k{display:block;font-size:11px;color:var(--muted);margin-bottom:1px} .kv .v{font-size:13.5px;overflow-wrap:anywhere}
+  .sv{display:inline-flex;align-items:center;gap:6px;overflow-wrap:anywhere}
+  .qr{display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0}
+  .qr svg{width:190px;height:190px;border-radius:10px}
+  .gnum{flex:0 0 22px;color:var(--muted);font-variant-numeric:tabular-nums;font-size:12.5px;text-align:right}
+  .kinds{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .kind{display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:7px 2px;
+    color:var(--txt);font-size:10px;font-family:inherit;cursor:pointer;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .kind svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .kind.on{border-color:var(--accent);background:var(--accent);color:#fff}
+  /* a guide section, readable on a phone */
+  .guide{font-size:14.5px;line-height:1.55}
+  .guide p{margin:0 0 10px} .guide ul,.guide ol{margin:0 0 10px;padding-left:22px} .guide li{margin-bottom:5px}
+  .guide h4{margin:14px 0 6px;font-size:15px}
+  .gcrumb{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .gcrumb svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .callout{background:var(--card2);border-left:3px solid var(--warn);border-radius:8px;padding:9px 11px;margin:0 0 10px;font-size:13.5px}
+  .gtable{overflow-x:auto;margin:0 0 10px;border:1px solid var(--line);border-radius:10px}
+  .gtable table{border-collapse:collapse;width:100%;font-size:12.5px;line-height:1.4}
+  .gtable th,.gtable td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  .gtable th{background:var(--card2);font-weight:600} .gtable tr:last-child td{border-bottom:0}
+  .figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:0 0 10px}
+  figure{margin:0} figure img{display:block;width:100%;border-radius:10px;background:var(--bg2)}
+  figcaption{font-size:11.5px;color:var(--muted);margin-top:3px}
+  .ph{font-size:12px;color:var(--muted);background:var(--bg2);border:1px dashed var(--line);border-radius:10px;padding:18px 10px;text-align:center}
+  .glink{background:none;border:none;color:var(--accent2);padding:0;font:inherit;cursor:pointer;text-decoration:underline}
   .tot{display:flex;justify-content:flex-end;gap:12px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;padding:2px 0 0}
 </style>
 </head>
@@ -261,22 +312,23 @@
 </div>
 <nav id="nav"></nav>
 
-<script src="backend.js?v=18"></script>
+<script src="backend.js?v=19"></script>
 <script>
-const APP_VERSION="18";
+const APP_VERSION="19";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
    Everything this device remembers, in one localStorage key. */
 const KEY = 'slate-v1';
 function loadStore(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
-const store = Object.assign({ backend:{ url:'', token:'' }, backendVersion:null, tasks:[], bookmarks:[], dirty:[], syncedAt:null,
+const store = Object.assign({ backend:{ url:'', token:'' }, backendVersion:null, tasks:[], bookmarks:[], care:[], careLog:[], guides:[], dirty:[], syncedAt:null,
   bm:'all', filter:null }, loadStore());
 /* v1 marked a waiting task by its id alone; now a key says which tab. */
-const migrateKey = (k) => /^[TB]:/.test(k) ? k : 'T:'+k;
+const migrateKey = (k) => /^[TBCLG]:/.test(k) ? k : 'T:'+k;
 store.dirty = (store.dirty||[]).map(migrateKey);
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { /* private mode */ } };
-const state = { tab:'week', lastTab:'week', view:null, edit:null, about:null, bmEdit:null, sync:null, fopen:false, fpick:null, statPick:false, listY:0 };
+const careState = () => ({ view:null, edit:null, guide:null, rec:null, order:false, shown:{}, qr:false, delArm:null });
+const state = { care:careState(), tab:'week', lastTab:'week', view:null, edit:null, about:null, bmEdit:null, sync:null, fopen:false, fpick:null, statPick:false, listY:0 };
 
 /* ------------------------------------------------------------- the model --
    A task: a name, a status, the day it was made and the moment it last
@@ -503,7 +555,11 @@ const FIXED_IDS = Object.keys(FIXED);
 const LIST_TABS = FIXED_IDS.map((k)=>[k, FIXED[k].label]).concat([['lists', 'Bookmarks']]);
 const GROUP = ['home', 'finance', 'admin', 'lists', 'archive'];
 const SUB_TABS = GROUP.map((k)=>[k, k==='lists' ? 'Bookmarks' : FIXED[k].label]);
-const BAR = [['week', 'This week'], ['nextweek', 'Coming up'], ['group', 'Bookmarks']];
+/* The bottom bar: Checklist (the todo list) and Care (the house). Checklist
+   has a bar of its own at the top: This week, Coming up, Bookmarks. */
+const BAR = [['checklist', 'Checklist'], ['care', 'Care']];
+const CHECK_TABS = [['week', 'This week'], ['nextweek', 'Coming up'], ['group', 'Bookmarks']];
+const isCheckTab = (k) => k==='week' || k==='nextweek' || GROUP.includes(k);
 const inGroup = (k) => GROUP.includes(k);
 const isFixedTab = () => !!FIXED[state.tab];
 const isWeekTab = () => state.tab==='week';
@@ -604,8 +660,9 @@ for (const id of FIXED_IDS) {
 }
 /* the bookmarks tab shows All or one of yours; the fixed lists have their own tabs */
 if (FIXED[store.bm]) store.bm = 'all';
-if (LIST_TABS.some(([k])=>k===store.tab)) { state.tab = store.tab; state.lastTab = store.tab; }
+if (LIST_TABS.some(([k])=>k===store.tab) || store.tab==='care') { state.tab = store.tab; state.lastTab = store.tab; }
 if (!inGroup(store.sub)) store.sub = inGroup(store.tab) ? store.tab : 'home';
+if (!isCheckTab(store.check)) store.check = isCheckTab(store.tab) ? store.tab : 'week';
 
 /* ------------------------------------------------------- the sheet's rows --
    Tasks: one row per task. The lists sit in one cell each, one line per
@@ -689,8 +746,25 @@ const readBm = (o) => { const g = (k) => o[k]==null ? '' : String(o[k]);
 /* A tab as records: header names to cell values. */
 const records = (tab) => { const h = ((tab && tab.headers) || []).map((x)=>String(x).trim());
   return ((tab && tab.rows) || []).map((r)=>{ const o = {}; h.forEach((k,i)=>{ o[k] = r[i]; }); return o; }).filter((o)=>o.Id); };
+/* Care: one row per thing in the house, one per entry in its log, one per
+   section of a guide. A cell holds text as it reads in the sheet; the lists
+   (Details, Secrets, Readings, Values) one line each. */
+const plainTab = (name, key, cols) => {
+  const H = cols.map(([h])=>h);
+  return { name, key, headers:()=>H,
+    row:(x)=>cols.map(([, f])=>x[f]==null ? '' : x[f]),
+    read:(o)=>{ const r = {}; for (const [h, f] of cols) r[f] = o[h]==null ? '' : String(o[h]); return r; } };
+};
+const CARE_COLS = [['Id','id'], ['Name','name'], ['Kind','kind'], ['Order','order'], ['Details','details'], ['Secrets','secrets'], ['Readings','readings'], ['Task','task'], ['Updated','updated'], ['Deleted','deleted']];
+const LOG_COLS = [['Id','id'], ['Item','item'], ['Date','date'], ['Values','values'], ['Note','note'], ['Updated','updated'], ['Deleted','deleted']];
+const GUIDE_COLS = [['Id','id'], ['Item','item'], ['Order','order'], ['Title','title'], ['Text','text'], ['Updated','updated'], ['Deleted','deleted']];
+const blankOf = (cols) => Object.fromEntries(cols.map(([, f])=>[f, '']));
 const TABS = { T:{ name:'Tasks', headers:taskHeaders, row:taskRow, read:readTask, key:'tasks' },
-               B:{ name:'Bookmarks', headers:()=>BM_HEADERS, row:bmRow, read:readBm, key:'bookmarks' } };
+               B:{ name:'Bookmarks', headers:()=>BM_HEADERS, row:bmRow, read:readBm, key:'bookmarks' },
+               C:plainTab('Care', 'care', CARE_COLS),
+               L:plainTab('Care log', 'careLog', LOG_COLS),
+               G:plainTab('Guides', 'guides', GUIDE_COLS) };
+for (const p of ['C','L','G']) if (!Array.isArray(store[TABS[p].key])) store[TABS[p].key] = [];
 
 
 /* ------------------------------------------------------------------- sync --
@@ -802,7 +876,8 @@ const byUpdates = (b, m, t) => {
   const date = (e) => (/^(\d{4}-\d{2}-\d{2}):/.exec(e)||[])[1] || '';
   return out.map((e,i)=>[e,i]).sort((x,y)=>date(y[0]).localeCompare(date(x[0])) || x[1]-y[1]).map((x)=>x[0]).join('\n');
 };
-const MERGE = { T:{ 'Next steps':bySteps, 'Updates':byUpdates, 'Links':byLine, 'Costs':byLine, 'Tags':byComma, 'Assignees':byComma }, B:{} };
+const MERGE = { T:{ 'Next steps':bySteps, 'Updates':byUpdates, 'Links':byLine, 'Costs':byLine, 'Tags':byComma, 'Assignees':byComma }, B:{},
+  C:{ 'Details':byLine, 'Secrets':byLine, 'Readings':byLine }, L:{ 'Values':byLine }, G:{} };
 function mergeRec(p, base, mine, theirs){
   const T = TABS[p], heads = T.headers(), row = T.row(mine), out = {};
   heads.forEach((h, i)=>{
@@ -825,7 +900,8 @@ function mergeRec(p, base, mine, theirs){
    costs, tags, assignees. What changed here goes up to the sheet. */
 function exportData(){
   return { app:'Slate', format:1, version:APP_VERSION, exported:NOW(),
-    tasks:JSON.parse(JSON.stringify(store.tasks)), bookmarks:JSON.parse(JSON.stringify(store.bookmarks)) };
+    tasks:JSON.parse(JSON.stringify(store.tasks)), bookmarks:JSON.parse(JSON.stringify(store.bookmarks)),
+    care:JSON.parse(JSON.stringify(store.care)), careLog:JSON.parse(JSON.stringify(store.careLog)), guides:JSON.parse(JSON.stringify(store.guides)) };
 }
 function downloadExport(){
   const blob = new Blob([JSON.stringify(exportData(), null, 2)], { type:'application/json' });
@@ -850,6 +926,9 @@ function importBm(b){
   return { id:String(b.id), name:String(b.name||''), filter:{ q:String(f.q||''), inc:arr(f.inc), exc:arr(f.exc) },
     sort:b.sort||'custom', order:arr(b.order).map(String), updated:String(b.updated||''), deleted:String(b.deleted||'') };
 }
+/* a Care, Care log or Guides record: its columns, each as text */
+const importPlain = (p) => (x) => { if (!x || typeof x !== 'object' || !x.id) return null;
+  const T = TABS[p], o = {}; T.headers().forEach((h, i)=>{ o[h] = T.row(x)[i]; }); return T.read(o); };
 /* the same record, whenever it last changed? */
 const sameRec = (p, a, b) => { const T = TABS[p], u = T.headers().indexOf('Updated'), ra = T.row(a), rb = T.row(b);
   return ra.every((c, i)=>i===u || String(c)===String(rb[i])); };
@@ -871,19 +950,22 @@ function mergeIn(p, rec, n){
 function importData(text){
   let d;
   try { d = JSON.parse(text); } catch (e) { throw new Error('Not a Slate export (not JSON).'); }
-  if (!d || typeof d !== 'object' || (!Array.isArray(d.tasks) && !Array.isArray(d.bookmarks))) throw new Error('Not a Slate export (no tasks).');
+  if (!d || typeof d !== 'object' || !['tasks','bookmarks','care','careLog','guides'].some((k)=>Array.isArray(d[k]))) throw new Error('Not a Slate export (no tasks).');
   const n = { added:0, merged:0, same:0 }, nb = { added:0, merged:0, same:0 };
   for (const t of arr(d.tasks).map(importTask).filter(Boolean)) mergeIn('T', t, n);
   for (const b of arr(d.bookmarks).map(importBm).filter(Boolean)) mergeIn('B', b, nb);
+  const nc = { added:0, merged:0, same:0 };
+  for (const [p, k] of [['C','care'], ['L','careLog'], ['G','guides']]) for (const x of arr(d[k]).map(importPlain(p)).filter(Boolean)) mergeIn(p, x, nc);
   save(); syncSoon();
-  return { tasks:n, bookmarks:nb };
+  return { tasks:n, bookmarks:nb, care:nc };
 }
 async function importFile(file){
   if (!file) return;
   try {
     const r = importData(await file.text()), t = r.tasks, b = r.bookmarks;
     state.io = { msg:'Imported · ' + t.added + ' new, ' + t.merged + ' merged, ' + t.same + ' already here'
-      + (b.added + b.merged ? ' · lists: ' + b.added + ' new, ' + b.merged + ' merged' : '') };
+      + (b.added + b.merged ? ' · lists: ' + b.added + ' new, ' + b.merged + ' merged' : '')
+      + (r.care.added + r.care.merged ? ' · care: ' + r.care.added + ' new, ' + r.care.merged + ' merged' : '') };
   } catch (e) { state.io = { msg:e.message, bad:true }; }
   render();
 }
@@ -955,13 +1037,14 @@ function screenSteps(){
     <div class="tlist">${rows || `<div class="empty">No step with a date.</div>`}</div>
   </div>`;
 }
+/* Checklist's bar at the top; on Bookmarks, its own row under it. */
 function subnav(){
-  return `<div class="subnav">${SUB_TABS.map(([k, label])=>`<button class="${state.tab===k?'active':''}" data-tab="${k}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${label}</button>`).join('')}</div>`;
+  const top = `<div class="subnav">${CHECK_TABS.map(([k, label])=>{ const on = k==='group' ? inGroup(state.tab) : state.tab===k;
+    return `<button class="${on?'active':''}" data-tab="${k}"><svg viewBox="0 0 24 24">${ICONS[k==='group'?'lists':k]}</svg>${label}</button>`; }).join('')}</div>`;
+  return top + (inGroup(state.tab) ? `<div class="subnav2">${SUB_TABS.map(([k, label])=>`<button class="chip sm${state.tab===k?' on':''}" data-tab="${k}">${label}</button>`).join('')}</div>` : '');
 }
 function screenTasks(){
-  if (isStepsTab()) return screenSteps();
-  if (inGroup(state.tab)) return subnav() + screenList();
-  return screenList();
+  return subnav() + (isStepsTab() ? screenSteps() : screenList());
 }
 function screenList(){
   const f = userFilter(), b = activeBm(), ts = shownTasks(), sort = sortOf();
@@ -1187,6 +1270,373 @@ function bmSheet(){
   </div>`;
 }
 
+/* ------------------------------------------------------------------- care --
+   The house: one tile per thing kept up (the pool, the AC units, the
+   internet...). What the code knows is only the kinds - an icon, and which
+   readings a new one starts with; what each one is (brand, model, codes,
+   guides, the readings taken) lives in the sheet, never here, since the code
+   is public. An item's reminders are the steps of a task it is linked to, so
+   they show in This week and Coming up like any other. */
+const CARE_KINDS = {
+  pool:     { label:'Pool', icon:'<path d="M2 17c2 0 2.5-1.5 5-1.5s3 1.5 5 1.5 2.5-1.5 5-1.5 3 1.5 5 1.5M2 21c2 0 2.5-1.5 5-1.5s3 1.5 5 1.5 2.5-1.5 5-1.5 3 1.5 5 1.5"/><path d="M8 14V5a2 2 0 0 1 4 0M14 14V5a2 2 0 0 1 4 0M8 8h6M8 11.5h6"/>',
+    readings:'pH | | 7.0-7.4\nChlorine | mg/L | 1-3\nSalt | g/L | 3-5\nStabilizer | mg/L | 20-30\nAlkalinity | mg/L | 80-120\nWater temp | °C |\nPressure | psi | -20' },
+  ac:       { label:'AC units', icon:'<path d="M12 2v20M3.5 7l17 10M3.5 17l17-10M9.5 3.5L12 6l2.5-2.5M9.5 20.5L12 18l2.5 2.5"/>' },
+  camera:   { label:'Cameras', icon:'<rect x="2" y="7" width="14" height="10" rx="2"/><path d="M16 10.5l6-3.5v10l-6-3.5"/><circle cx="9" cy="12" r="2.5"/>' },
+  internet: { label:'Internet', icon:'<path d="M2 8.8a15 15 0 0 1 20 0M5 12.6a10 10 0 0 1 14 0M8.5 16.3a5 5 0 0 1 7 0"/><circle cx="12" cy="19.6" r="1"/>', secrets:'Wifi name:\nWifi password:' },
+  alarm:    { label:'Alarm', icon:'<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>', secrets:'Code:' },
+  softener: { label:'Water softener', icon:'<rect x="6" y="3" width="12" height="18" rx="4"/><path d="M12 8.5s2.5 2.6 2.5 4.4a2.5 2.5 0 0 1-5 0c0-1.8 2.5-4.4 2.5-4.4z"/>',
+    readings:'Salt added | kg |\nHardness | °f |' },
+  heater:   { label:'Water heater', icon:'<path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 2 1.2 3 2.2 3C11 9 11 6 12 3z"/>', readings:'Temperature | °C |' },
+  energy:   { label:'Energy', icon:'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', readings:'Electricity | kWh | meter' },
+  water:    { label:'Water', icon:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>', readings:'Water | m³ | meter' },
+  garden:   { label:'Garden', icon:'<path d="M5 20c0-8.5 6-15 15-15 0 9-6 15-14.5 15"/><path d="M5 20l8.5-8.5"/>' },
+  car:      { label:'Car', icon:'<path d="M3 16v-4l2.5-5h13l2.5 5v4z"/><circle cx="7.5" cy="16.5" r="2"/><circle cx="16.5" cy="16.5" r="2"/>' },
+  appliance:{ label:'Appliance', icon:'<rect x="4" y="2" width="16" height="20" rx="2"/><circle cx="12" cy="13" r="4.5"/><path d="M7 5.5h2"/>' },
+  other:    { label:'Other', icon:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>' },
+};
+const kindOf = (c) => CARE_KINDS[c.kind] || CARE_KINDS.other;
+const careIcon = (c) => `<svg viewBox="0 0 24 24">${kindOf(c).icon}</svg>`;
+/* The starter set: fixed ids, so two phones make the same nine, and no date,
+   so whatever the sheet holds for them (an edit, a deletion) wins. They are
+   not sent up unless the sheet has none of them. */
+const STARTER = [['c-pool','Pool','pool'], ['c-ac','AC units','ac'], ['c-cameras','Cameras','camera'], ['c-internet','Internet','internet'],
+  ['c-alarm','Alarm','alarm'], ['c-softener','Water softener','softener'], ['c-heater','Water heater','heater'], ['c-energy','Energy','energy'], ['c-water','Water','water']];
+STARTER.forEach(([id, name, kind], i)=>{ if (store.care.some((c)=>c.id===id)) return;
+  store.care.push(Object.assign(blankOf(CARE_COLS), { id, name, kind, order:String(i+1), readings:CARE_KINDS[kind].readings||'', secrets:CARE_KINDS[kind].secrets||'' })); });
+
+const careLive = () => store.care.filter((c)=>!c.deleted).sort((a,b)=>(+a.order||0)-(+b.order||0) || byName(a,b));
+const careById = (id) => store.care.find((c)=>c.id===id && !c.deleted) || null;
+/* "Label: value" lines; a line with no colon is a value alone */
+const kvLines = (s) => lines(s).map((l)=>{ const i = l.indexOf(':'); return i<0 ? { k:'', v:l } : { k:l.slice(0,i).trim(), v:l.slice(i+1).trim() }; });
+/* what can be recorded: "Name | unit | 7.0-7.4" (or -20, 3-, meter) */
+function readDefs(s){
+  return lines(s).map((l)=>{ const [name, unit, range] = l.split('|').map((x)=>(x||'').trim());
+    const d = { name, unit:unit||'', lo:null, hi:null, meter:/^meter$/i.test(range||'') };
+    const m = /^([\d.,]*)\s*[-–]\s*([\d.,]*)$/.exec(range||'');
+    if (m) { d.lo = num(m[1]); d.hi = num(m[2]); }
+    return d; }).filter((d)=>d.name);
+}
+const valMap = (s) => { const o = {}; for (const { k, v } of kvLines(s)) if (k) o[k.toLowerCase()] = v; return o; };
+const logsOf = (id) => store.careLog.filter((l)=>l.item===id && !l.deleted).sort((a,b)=>String(b.date).localeCompare(String(a.date)) || String(b.updated).localeCompare(String(a.updated)));
+const guidesOf = (id) => store.guides.filter((g)=>g.item===id && !g.deleted).sort((a,b)=>(+a.order||0)-(+b.order||0));
+/* the readings of one kind, oldest first, each a number on a day */
+const series = (id, d) => logsOf(id).map((l)=>({ date:String(l.date).slice(0,10), v:num(valMap(l.values)[d.name.toLowerCase()]) })).filter((p)=>p.v!=null && p.date).reverse();
+const inRange = (d, v) => v==null || d.meter ? null : !((d.lo!=null && v<d.lo) || (d.hi!=null && v>d.hi));
+const rangeText = (d) => d.meter ? 'meter' : d.lo!=null && d.hi!=null ? d.lo + '–' + d.hi : d.lo!=null ? '≥ ' + d.lo : d.hi!=null ? '≤ ' + d.hi : '';
+/* a meter: what was used per day between two readings */
+const perDay = (pts) => pts.slice(1).map((p, i)=>{ const q = pts[i], days = (dOf(p.date) - dOf(q.date)) / 864e5;
+  return days > 0 ? { date:p.date, v:r2((p.v - q.v) / days), from:q.date } : null; }).filter(Boolean);
+/* the linked task's steps not done: the reminders */
+const careTask = (c) => c.task ? store.tasks.find((t)=>t.id===c.task && !t.deleted) || null : null;
+const remindersOf = (c) => { const t = careTask(c); if (!t) return [];
+  return t.steps.map((st, i)=>({ t, i, st })).filter((x)=>!x.st.done).sort((a,b)=>(a.st.due||'9999').localeCompare(b.st.due||'9999')); };
+/* what wants looking at: a reminder late, or the last reading out of its range */
+function careAlert(c){
+  const late = remindersOf(c).filter((x)=>x.st.due && x.st.due < TODAY()).length;
+  const out = readDefs(c.readings).filter((d)=>{ const s = series(c.id, d); return s.length && inRange(d, s[s.length-1].v)===false; }).map((d)=>d.name);
+  return [late ? late + ' late' : '', out.length ? out.join(', ') + ' out of range' : ''].filter(Boolean).join(' · ');
+}
+const ago = (d) => { const n = Math.round((dOf(TODAY()) - dOf(String(d).slice(0,10))) / 864e5);
+  return n<=0 ? 'today' : n===1 ? 'yesterday' : n<14 ? n + ' days ago' : n<60 ? Math.round(n/7) + ' weeks ago' : Math.round(n/30) + ' months ago'; };
+const fmtV = (v) => String(v).replace(/\.0+$/, '');
+
+/* A small line chart: the readings over time, the range as a band. */
+function chart(pts, d){
+  if (pts.length < 2) return '';
+  const W = 300, H = 64, P = 4, t0 = dOf(pts[0].date).getTime(), t1 = dOf(pts[pts.length-1].date).getTime() || t0 + 1;
+  let lo = Math.min(...pts.map((p)=>p.v)), hi = Math.max(...pts.map((p)=>p.v));
+  if (d && d.lo!=null) lo = Math.min(lo, d.lo); if (d && d.hi!=null) hi = Math.max(hi, d.hi);
+  if (hi===lo) { hi += 1; lo -= 1; }
+  const x = (t) => P + (W-2*P) * (t1===t0 ? 1 : (t - t0) / (t1 - t0)), y = (v) => H - P - (H-2*P) * (v - lo) / (hi - lo);
+  const band = d && (d.lo!=null || d.hi!=null) ? `<rect x="0" width="${W}" y="${y(d.hi!=null ? d.hi : hi)}" height="${Math.max(0, y(d.lo!=null ? d.lo : lo) - y(d.hi!=null ? d.hi : hi))}" fill="var(--good)" opacity=".12"/>` : '';
+  const xy = pts.map((p)=>[x(dOf(p.date).getTime()), y(p.v)]);
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${band}<polyline points="${xy.map((q)=>q.join(',')).join(' ')}" fill="none" stroke="var(--accent2)" stroke-width="1.8" vector-effect="non-scaling-stroke"/>${
+    xy.map((q, i)=>`<circle cx="${q[0]}" cy="${q[1]}" r="2.4" fill="${d && inRange(d, pts[i].v)===false ? 'var(--bad)' : 'var(--accent2)'}"/>`).join('')}</svg>`;
+}
+
+/* ----------------------------------------------------------- the guides --
+   A guide is one row per section; its text is a light Markdown: paragraphs,
+   "- " and "1. " lists, **bold**, "> " a note, "| a | b |" tables, "### "
+   a heading, ![caption](photo.jpg) a photo from the Drive folder, and
+   [page 9](§9) a link to the section of that number. Everything is escaped
+   first: a cell can never be HTML. */
+const PHOTO = {};          /* name -> { url } | { err } | { loading:true } */
+let photoWant = [];
+function inline(s){
+  return esc(s).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/\[([^\]]+)\]\(§\s*(\d+)\)/g, (m, t, n)=>`<button class="glink" data-gsec="${n}">${t}</button>`)
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (m, t, u)=>`<a class="lnk" href="${u}" target="_blank" rel="noopener noreferrer">${t}</a>`);
+}
+const IMG = /^!\[([^\]]*)\]\(([^)\s]+)\)$/;
+function photoHtml(cap, name){
+  const p = PHOTO[name];
+  if (!p || p.loading) { if (!p) photoWant.push(name); }
+  const img = p && p.url ? `<img src="${esc(p.url)}" alt="${esc(cap)}">` : `<div class="ph">${p && p.err ? esc(p.err) : 'Loading the photo…'}</div>`;
+  return `<figure>${img}${cap ? `<figcaption>${esc(cap)}</figcaption>` : ''}</figure>`;
+}
+function md(text){
+  const out = [];
+  for (const block of String(text||'').replace(/\r/g, '').split(/\n\s*\n/)) {
+    const ls = block.split('\n').filter((l)=>l.trim());
+    if (!ls.length) continue;
+    const all = (re) => ls.every((l)=>re.test(l.trim()));
+    if (all(/^\|/)) {
+      /* a header row only when a |---| line follows it */
+      const sep = (l) => /^\|?\s*:?-{2,}/.test(l.trim()), head = ls.length > 1 && sep(ls[1]);
+      const rows = ls.filter((l)=>!sep(l)).map((l)=>l.trim().replace(/^\||\|$/g, '').split('|').map((c)=>c.trim()));
+      out.push(`<div class="gtable"><table>${rows.map((r, i)=>`<tr>${r.map((c)=>i || !head ? `<td>${inline(c)}</td>` : `<th>${inline(c)}</th>`).join('')}</tr>`).join('')}</table></div>`);
+    } else if (all(IMG)) {
+      out.push(`<div class="figs">${ls.map((l)=>{ const m = IMG.exec(l.trim()); return photoHtml(m[1], m[2]); }).join('')}</div>`);
+    } else if (/^\s*([-*]|\d+[.)])\s/.test(ls[0])) {
+      const ol = /^\s*\d/.test(ls[0]), items = [];
+      for (const l of ls) { const m = /^\s*(?:[-*]|\d+[.)])\s+(.*)$/.exec(l); if (m) items.push(inline(m[1])); else items[items.length-1] += '<br>' + inline(l.trim()); }
+      out.push(`<${ol?'ol':'ul'}>${items.map((x)=>`<li>${x}</li>`).join('')}</${ol?'ol':'ul'}>`);
+    } else if (all(/^>/)) {
+      out.push(`<div class="callout">${ls.map((l)=>inline(l.trim().replace(/^>\s?/, ''))).join('<br>')}</div>`);
+    } else if (/^#{1,4}\s/.test(ls[0])) {
+      out.push(`<h4>${inline(ls[0].replace(/^#+\s*/, ''))}</h4>`);
+      if (ls.length > 1) out.push(`<p>${ls.slice(1).map(inline).join('<br>')}</p>`);
+    } else out.push(`<p>${ls.map((l)=>{ const m = IMG.exec(l.trim()); return m ? photoHtml(m[1], m[2]) : inline(l); }).join('<br>')}</p>`);
+  }
+  return out.join('');
+}
+/* A photo: from this phone's own cache, else through the script (it reads the
+   Drive folder "Slate photos"), then kept for offline use. */
+const PHOTO_CACHE = 'slate-photos';
+const b64Blob = (b64, type) => { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], { type }); };
+async function loadPhoto(name){
+  if (PHOTO[name]) return;
+  PHOTO[name] = { loading:true };
+  try {
+    const key = new URL('photo/' + encodeURIComponent(name), location.href).href;
+    let blob = null;
+    if (typeof caches !== 'undefined') { const hit = await (await caches.open(PHOTO_CACHE)).match(key); if (hit) blob = await hit.blob(); }
+    if (!blob) {
+      if (!connected()) throw new Error('Connect the sheet to see the photos.');
+      const j = await BK.photo(store.backend, name);
+      blob = b64Blob(j.data, j.type);
+      if (typeof caches !== 'undefined') try { await (await caches.open(PHOTO_CACHE)).put(key, new Response(blob, { headers:{ 'Content-Type':j.type } })); } catch (e) { /* full: shown all the same */ }
+    }
+    PHOTO[name] = { url:URL.createObjectURL(blob) };
+  } catch (e) { PHOTO[name] = { err:'Photo ' + name + ': ' + e.message }; }
+  render();
+}
+
+/* The Wi-Fi QR code: drawn here, from the item's name and password, by the
+   qrcode-generator library, fetched only when asked for. */
+const QR_SVG = {};
+let qrLib = null;
+const wifiOf = (c) => { const kv = kvLines(c.details).concat(kvLines(c.secrets));
+  const ssid = (kv.find((x)=>/^(wi-?fi( name)?|ssid|network)$/i.test(x.k)) || {}).v, pass = (kv.find((x)=>/^(wi-?fi )?(password|key)$/i.test(x.k)) || {}).v;
+  return ssid ? { ssid, pass:pass||'' } : null; };
+const wifiText = (w) => { const e = (s) => String(s).replace(/([\\;,:"])/g, '\\$1'); return 'WIFI:T:' + (w.pass ? 'WPA' : 'nopass') + ';S:' + e(w.ssid) + ';P:' + e(w.pass) + ';;'; };
+function makeQr(text){
+  if (QR_SVG[text]) return;
+  qrLib = qrLib || new Promise((res, rej)=>{ const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'; s.onload = () => res(window.qrcode); s.onerror = rej; document.head.appendChild(s); });
+  qrLib.then((qrcode)=>{ const q = qrcode(0, 'M'); q.addData(text); q.make(); const n = q.getModuleCount(); let p = '';
+    for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) p += `M${k} ${r}h1v1h-1z`;
+    QR_SVG[text] = `<svg viewBox="-2 -2 ${n+4} ${n+4}" shape-rendering="crispEdges"><rect x="-2" y="-2" width="${n+4}" height="${n+4}" fill="#fff"/><path d="${p}" fill="#000"/></svg>`; render(); })
+    .catch(()=>{ qrLib = null; QR_SVG[text] = '<div class="ph">Go online once to draw the QR code.</div>'; render(); });
+}
+/* after a Care redraw: fetch what the page asked for */
+function afterCare(){
+  const want = photoWant; photoWant = [];
+  for (const n of new Set(want)) loadPhoto(n);
+  const c = careById(state.care.view), w = c && state.care.qr && wifiOf(c);
+  if (w && typeof document.createElement === 'function') makeQr(wifiText(w));
+}
+
+function screenCare(){
+  const C = state.care;
+  if (C.edit) return screenCareEdit();
+  if (C.view && !careById(C.view)) C.view = null;
+  if (C.guide && C.view) return screenGuide();
+  if (C.view) return screenCareItem();
+  const items = careLive(), seq = C.order && C.seq ? C.seq.map(careById).filter(Boolean) : items;
+  return `
+  <div class="card">
+    <h2><span class="ttl">Care<span class="n">${items.length}</span></span>
+      <span class="hbtns"><button class="chip sm${C.order?' on':''}" data-corder="${C.order?0:1}">${C.order?'Done':'Reorder'}</button>
+        <button class="gbtn" data-cnew="1" aria-label="New item">+</button></span></h2>
+    ${C.order ? '<div class="hint" style="margin-bottom:8px">Drag a tile to its place, then Done.</div>' : ''}
+    <div class="cgrid${C.order?' order':''}">${seq.map((c, i)=>{ const a = careAlert(c);
+      return `<div class="ctile${C.dragIdx===i?' lift':''}" ${C.order ? `data-cdrag="${i}"` : `data-copen="${esc(c.id)}"`} data-ctile="${i}">
+        <span class="cic">${careIcon(c)}${a ? '<span class="calert"></span>' : ''}</span><span class="cname">${esc(c.name)}</span></div>`; }).join('')
+      || '<div class="empty">Nothing yet: + adds a thing to look after.</div>'}</div>
+  </div>`;
+}
+function screenCareItem(){
+  const C = state.care, c = careById(C.view), defs = readDefs(c.readings), logs = logsOf(c.id), rem = remindersOf(c), task = careTask(c);
+  const alert = careAlert(c), sec = kvLines(c.secrets), det = kvLines(c.details), gs = guidesOf(c.id), w = wifiOf(c);
+  const latest = defs.map((d)=>{ const s = series(c.id, d); if (!s.length) return '';
+    const last = s[s.length-1];
+    if (d.meter) { const pd = perDay(s), r = pd[pd.length-1];
+      return `<div class="rd"><span class="k">${esc(d.name)}</span><span class="v">${esc(fmtV(last.v))} ${esc(d.unit)}</span><span class="when">${r ? esc(fmtV(r.v) + ' ' + d.unit + '/day since ' + dLabel(r.from)) : esc(ago(last.date))}</span></div>${chart(pd, null)}`; }
+    const ok = inRange(d, last.v);
+    return `<div class="rd"><span class="k">${esc(d.name)}</span><span class="v ${ok===false?'bad':ok?'good':''}">${esc(fmtV(last.v))} ${esc(d.unit)}</span><span class="when">${esc(rangeText(d) ? rangeText(d) + ' · ' : '')}${esc(ago(last.date))}</span></div>${chart(s.slice(-24), d)}`; }).join('');
+  return `
+  <div class="page care">
+    <div class="ptitle"><span class="cic big">${careIcon(c)}</span><h2>${esc(c.name)}</h2><button class="gbtn" data-cedit="${esc(c.id)}" aria-label="Edit">✏️</button></div>
+    ${alert ? `<div class="status bad" style="margin:-4px 0 6px">${esc(alert)}</div>` : ''}
+    <div class="sec"><span>Reminders</span>${task ? `<button class="chip sm" data-ctask="${esc(task.id)}">Edit</button>` : `<button class="chip sm add" data-cremind="1">+ Reminders</button>`}</div>
+    ${rem.map(({ t, i, st })=>`<div class="vli"><span class="ck" data-cck="${esc(t.id)}|${i}"></span><span class="t">${esc(st.text || '(no text)')}${
+      st.repeat ? `<span class="rept">↻ ${esc(repeatText(st.repeat))}${st.last ? ' · last ' + esc(dLabel(st.last)) : ''}</span>` : ''}</span>${st.due ? `<span class="when ${dueClass(st.due)}">${esc(dLabel(st.due))}</span>` : ''}</div>`).join('')
+      || `<div class="empty">${task ? 'Nothing to do.' : 'No reminders yet.'}</div>`}
+    ${logs.length ? `<div class="sec"><span>Log</span><button class="gbtn" data-crec="1" aria-label="Record">+</button></div>
+      ${latest}
+      ${logs.slice(0, 30).map((l)=>`<div class="upd"><span class="when">${esc(dLabel(l.date))}</span><div class="info">${kvLines(l.values).map(({ k, v })=>{ const d = defs.find((x)=>same(x.name, k)), ok = d ? inRange(d, num(v)) : null;
+        return `<span class="lv ${ok===false?'bad':''}">${esc(k)} <b>${esc(v)}</b>${d && d.unit ? ' ' + esc(d.unit) : ''}</span>`; }).join(' ')}${l.note ? `<div>${esc(l.note)}</div>` : ''}</div><span class="x" data-cldel="${esc(l.id)}">${C.delArm===l.id ? 'Delete?' : '×'}</span></div>`).join('')}` :
+      `<div class="sec"><span>Log</span><button class="gbtn" data-crec="1" aria-label="Record">+</button></div><div class="empty">Nothing recorded yet.</div>`}
+    ${det.length ? `<div class="sec">Details</div>${det.map(({ k, v })=>`<div class="kv">${k ? `<span class="k">${esc(k)}</span>` : ''}<span class="v">${esc(v)}</span></div>`).join('')}` : ''}
+    ${sec.length ? `<div class="sec">Secrets</div>${sec.map(({ k, v }, i)=>`<div class="kv">${k ? `<span class="k">${esc(k)}</span>` : ''}<span class="v sv">${
+      C.shown[i] ? esc(v) || '—' : v ? '••••••' : '—'}${v ? `<button class="chip sm" data-csec="${i}">${C.shown[i] ? 'Hide' : 'Show'}</button><button class="chip sm" data-ccopy="${i}">Copy</button>` : ''}</span></div>`).join('')}` : ''}
+    ${w ? `<div class="sec"><span>Wi-Fi</span><button class="chip sm${C.qr?' on':''}" data-cqr="1">${C.qr ? 'Hide QR' : 'QR code'}</button></div>
+      ${C.qr ? `<div class="qr">${QR_SVG[wifiText(w)] || '<div class="ph">Drawing…</div>'}<div class="hint">${esc(w.ssid)}: point a phone's camera here to join.</div></div>` : ''}` : ''}
+    ${gs.length ? `<div class="sec">Guide</div>${gs.map((g)=>`<div class="trow" data-gopen="${esc(g.id)}"><span class="gnum">${esc(g.order)}</span><span class="tn">${esc(g.title)}</span></div>`).join('')}` : ''}
+    <div class="stamp">${esc(kindOf(c).label)}${c.updated ? ' · Updated ' + esc(dLabel(c.updated)) : ''}</div>
+    <div class="closebar"><button class="btn close" data-cclose="1">Close</button></div>
+  </div>`;
+}
+function screenGuide(){
+  const C = state.care, c = careById(C.view), gs = guidesOf(c.id), i = gs.findIndex((g)=>g.id===C.guide);
+  if (i < 0) { C.guide = null; return screenCareItem(); }
+  const g = gs[i], prev = gs[i-1], next = gs[i+1];
+  return `
+  <div class="page guide">
+    <div class="gcrumb">${careIcon(c)}${esc(c.name)} · Guide</div>
+    <div class="ptitle"><h2>${esc(g.order ? g.order + '. ' : '')}${esc(g.title)}</h2></div>
+    ${md(g.text)}
+    <div class="btnrow" style="margin-top:14px">${prev ? `<button class="btn" data-gopen="${esc(prev.id)}">‹ ${esc(prev.title)}</button>` : ''}${next ? `<button class="btn" data-gopen="${esc(next.id)}">${esc(next.title)} ›</button>` : ''}</div>
+    <div class="closebar"><button class="btn close" data-gclose="1">Close</button></div>
+  </div>`;
+}
+/* Record: one field per reading, the day (today) and a note. */
+function recSheet(){
+  const C = state.care, c = careById(C.view), r = C.rec; if (!c) return '';
+  const defs = readDefs(c.readings);
+  return `
+  <div class="sheetwrap">
+    <div class="scrim" data-crclose="1"></div>
+    <div class="sheet${r.fresh?' enter':''}">
+      <h3>${esc(c.name)}: record</h3>
+      <div class="field"><label>Day</label><input type="date" id="crDate" value="${esc(r.date)}"></div>
+      ${defs.map((d, i)=>`<div class="field"><label><span>${esc(d.name)}${d.unit ? ' (' + esc(d.unit) + ')' : ''}</span><span>${esc(rangeText(d))}</span></label>
+        <input id="crV${i}" inputmode="decimal" value="${esc(r.vals[i]||'')}"></div>`).join('')}
+      <div class="field"><label>Note</label><textarea id="crNote" placeholder="What was done, what was seen…">${esc(r.note)}</textarea></div>
+      <div class="foot"><button class="btn primary" style="flex:1" data-crsave="1">Save</button><button class="btn close" data-crclose="1">Cancel</button></div>
+    </div>
+  </div>`;
+}
+function screenCareEdit(){
+  const e = state.care.edit, d = e.d;
+  const tasks = live().filter((t)=>t.status!=='Done').sort(byName);
+  return `
+  <div class="page">
+    <div class="field"><label>Name</label><input id="ceName" value="${esc(d.name)}" placeholder="Pool, AC in the bedroom…"></div>
+    <div class="field"><label>Kind</label><div class="kinds">${Object.keys(CARE_KINDS).map((k)=>`<button class="kind${d.kind===k?' on':''}" data-ckind="${k}"><svg viewBox="0 0 24 24">${CARE_KINDS[k].icon}</svg>${esc(CARE_KINDS[k].label)}</button>`).join('')}</div></div>
+    <div class="field"><label>Details</label><textarea id="ceDet" placeholder="Brand: …&#10;Model: …&#10;Installed: 2021">${esc(d.details)}</textarea></div>
+    <div class="field"><label>Secrets <span>hidden until shown</span></label><textarea id="ceSec" placeholder="Wifi name: …&#10;Wifi password: …">${esc(d.secrets)}</textarea></div>
+    <div class="field"><label>Readings <span>name | unit | range</span></label><textarea id="ceRd" placeholder="pH | | 7.0-7.4&#10;Electricity | kWh | meter">${esc(d.readings)}</textarea>
+      <div class="hint">A range is low-high, -high or low-; "meter" is a counter: the log shows use per day.</div></div>
+    <div class="field"><label>Reminders from the task</label><select id="ceTask"><option value="">None</option>${
+      tasks.map((t)=>`<option value="${esc(t.id)}"${d.task===t.id?' selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
+    <div class="hint">The guide's sections are rows of the Guides tab in the sheet.</div>
+    <div class="closebar"><button class="btn close" data-ceclose="1">Close</button>${e.id ? `<button class="btn danger${e.delArm?' arm':''}" data-cdel="1">${e.delArm?'Delete?':'Delete'}</button>` : ''}</div>
+  </div>`;
+}
+function openCareEdit(id){
+  const c = id ? careById(id) : null;
+  state.care.edit = { id: c ? c.id : null, d: c ? { name:c.name, kind:c.kind||'other', details:c.details, secrets:c.secrets, readings:c.readings, task:c.task } :
+    { name:'', kind:'other', details:'', secrets:'', readings:'', task:'' }, delArm:false };
+  state.focus = c ? null : 'ceName';
+  render();
+}
+/* Keep the draft: into the item (made now if it is new and has a name). */
+function keepCare(quiet){
+  const e = state.care.edit; if (!e) return;
+  const d = e.d, name = d.name.trim();
+  let c = e.id ? store.care.find((x)=>x.id===e.id) : null;
+  if (!c) { if (!name) return; const top = Math.max(0, ...careLive().map((x)=>+x.order||0));
+    c = Object.assign(blankOf(CARE_COLS), { id:uid('c'), order:String(top + 1) }); store.care.push(c); e.id = c.id; }
+  const before = JSON.stringify(TABS.C.row(c));
+  Object.assign(c, { name:name || c.name, kind:d.kind, details:d.details.trim(), secrets:d.secrets.trim(), readings:d.readings.trim(), task:d.task });
+  if (JSON.stringify(TABS.C.row(c)) === before) return;
+  c.updated = NOW();
+  commit('C:'+c.id, quiet);
+}
+/* a tile dragged: the order becomes what is shown */
+function moveTile(from, to){
+  const seq = state.care.seq; if (!seq || from===to || to<0 || to>=seq.length) return false;
+  const [x] = seq.splice(from, 1); seq.splice(to, 0, x); return true;
+}
+function wireCare(){
+  const C = state.care;
+  on('copen', (id)=>{ state.care = Object.assign(careState(), { view:id }); render(); });
+  on('cnew', ()=>openCareEdit(null));
+  on('corder', (v)=>{ if (v==='1') { C.order = true; C.seq = careLive().map((c)=>c.id); render(); return; }
+    C.order = false; (C.seq||[]).forEach((id, i)=>{ const c = careById(id); if (c && String(c.order)!==String(i+1)) { c.order = String(i+1); c.updated = NOW(); markDirty('C:'+id); } });
+    C.seq = null; save(); render(); syncSoon(); });
+  document.querySelectorAll('[data-cdrag]').forEach((el)=>{
+    el.onpointerdown = (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      C.dragIdx = +el.dataset.cdrag; render();
+      const move = (ev) => { let to = C.dragIdx;
+        document.querySelectorAll('[data-ctile]').forEach((r)=>{ const b = r.getBoundingClientRect(); if (ev.clientX > b.left && ev.clientX < b.right && ev.clientY > b.top && ev.clientY < b.bottom) to = +r.dataset.ctile; });
+        if (to!==C.dragIdx && moveTile(C.dragIdx, to)) { C.dragIdx = to; render(); } };
+      const up = () => { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up); C.dragIdx = null; render(); };
+      document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+    }; });
+  on('cclose', ()=>{ state.care = careState(); render(); });
+  on('cedit', (id)=>openCareEdit(id));
+  on('cck', (v)=>{ const k = v.lastIndexOf('|'), t = store.tasks.find((x)=>x.id===v.slice(0, k)), st = t && t.steps[+v.slice(k+1)];
+    if (!st) return; tickStep(st); t.updated = NOW(); commit('T:'+t.id); });
+  on('ctask', (id)=>openEditor(id));
+  on('cremind', ()=>{ const c = careById(C.view); if (!c) return;
+    const t = Object.assign(blank('In progress'), { id:uid(), name:c.name, created:NOW(), updated:NOW(), tags:['Care'] });
+    store.tasks.push(t); markDirty('T:'+t.id);
+    c.task = t.id; c.updated = NOW(); commit('C:'+c.id, true);
+    openEditor(t.id); });
+  on('crec', ()=>{ C.rec = { fresh:true, date:TODAY(), vals:{}, note:'' }; render(); C.rec.fresh = false; });
+  on('crclose', ()=>{ C.rec = null; render(); });
+  on('crsave', ()=>{ const c = careById(C.view), r = C.rec; if (!c || !r) return;
+    const defs = readDefs(c.readings);
+    const values = defs.map((d, i)=>[d.name, String(r.vals[i]||'').trim()]).filter(([, v])=>v).map(([k, v])=>k + ': ' + v).join('\n');
+    if (!values && !r.note.trim()) { C.rec = null; render(); return; }
+    const l = Object.assign(blankOf(LOG_COLS), { id:uid('l'), item:c.id, date:r.date || TODAY(), values, note:r.note.trim(), updated:NOW() });
+    store.careLog.push(l); C.rec = null; commit('L:'+l.id); });
+  on('cldel', (id)=>{ if (C.delArm!==id) { C.delArm = id; render(); return; }
+    const l = store.careLog.find((x)=>x.id===id); C.delArm = null; if (!l) return; l.deleted = NOW(); l.updated = l.deleted; commit('L:'+id); });
+  on('csec', (i)=>{ C.shown[i] = !C.shown[i]; render(); });
+  on('ccopy', (i)=>{ const c = careById(C.view), s = c && kvLines(c.secrets)[+i];
+    if (s && typeof navigator !== 'undefined' && navigator.clipboard) navigator.clipboard.writeText(s.v).catch(()=>{}); });
+  on('cqr', ()=>{ C.qr = !C.qr; render(); });
+  on('gopen', (id)=>{ C.guide = id; state.focus = null; render(); if (typeof scrollTo==='function') scrollTo({ top:0 }); });
+  on('gsec', (n)=>{ const g = guidesOf(C.view).find((x)=>String(x.order)===String(n)); if (g) { C.guide = g.id; render(); if (typeof scrollTo==='function') scrollTo({ top:0 }); } });
+  on('gclose', ()=>{ C.guide = null; render(); });
+  /* the record sheet */
+  const r = C.rec;
+  if (r) { const c = careById(C.view);
+    const f = (id, set) => { const el = document.getElementById(id); if (el) el.oninput = () => set(el.value); };
+    f('crDate', (v)=>{ r.date = v; }); f('crNote', (v)=>{ r.note = v; });
+    if (c) readDefs(c.readings).forEach((d, i)=>f('crV'+i, (v)=>{ r.vals[i] = v; })); }
+  /* the editor */
+  const e = C.edit;
+  if (e) { const d = e.d;
+    const f = (id, k) => { const el = document.getElementById(id); if (el) el.oninput = () => { d[k] = el.value; }; };
+    f('ceName', 'name'); f('ceDet', 'details'); f('ceSec', 'secrets'); f('ceRd', 'readings');
+    const s = document.getElementById('ceTask'); if (s) s.onchange = () => { d.task = s.value; };
+    on('ckind', (k)=>{ d.kind = k;
+      /* a new item takes its kind's readings and secrets while it has none */
+      if (!e.id && !d.readings.trim()) d.readings = CARE_KINDS[k].readings || '';
+      if (!e.id && !d.secrets.trim()) d.secrets = CARE_KINDS[k].secrets || '';
+      render(); });
+    on('ceclose', ()=>{ keepCare(true); const id = e.id; state.care = Object.assign(careState(), { view:id && careById(id) ? id : null }); render(); });
+    on('cdel', ()=>{ if (!e.delArm) { e.delArm = true; render(); return; }
+      const c = store.care.find((x)=>x.id===e.id); state.care = careState();
+      if (c) { c.deleted = NOW(); c.updated = c.deleted; commit('C:'+c.id); } else render(); }); }
+}
+
 /* --------------------------------------------------------------- settings --*/
 function screenSettings(){
   const b = store.backend, st = state.sync;
@@ -1206,8 +1656,8 @@ function screenSettings(){
   </div>
   <div class="card">
     <h2>Your data</h2>
-    <div class="hint">Export saves every task and list on this phone to a file (not the sheet's address or token).
-      Import merges a file in: what this phone lacks is added, a task on both keeps the newer name and status
+    <div class="hint">Export saves every task, list and Care item (its log, guides and secrets too) on this phone to a file,
+      but not the sheet's address or token. Keep the file somewhere private. Import merges a file in: what this phone lacks is added, a task on both keeps the newer name and status
       and the steps, updates, links, costs and tags of both. Nothing here is removed.</div>
     <div class="btnrow" style="margin-top:10px">
       <button class="btn" data-export="1">Export</button>
@@ -1253,9 +1703,12 @@ function aboutSheet(){
    A page (a task, its editor) opens at its top; closing it brings the list
    back where it was. Every other redraw keeps its place. */
 let lastWhere = null;
-const where = () => state.tab + '|' + (state.view||'') + '|' + (state.edit ? 'e' : '');
+const where = () => state.tab + '|' + (state.view||'') + '|' + (state.edit ? 'e' : '')
+  + (state.tab==='care' ? '|' + [state.care.view, state.care.guide, state.care.edit ? 'e' : ''].join(',') : '');
 const listWhere = (w) => /^[a-z]+\|\|$/.test(w||'') && LIST_TABS.some(([k])=>w===k+'||');
 const ICONS = {
+  checklist:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 9l2 2 3-3.5M7 15.5l2 2 3-3.5M14.5 10h3M14.5 16.5h3"/>',
+  care:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M12 18.5l-2.6-2.5a1.7 1.7 0 0 1 2.6-2.2 1.7 1.7 0 0 1 2.6 2.2z"/>',
   week:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><circle cx="12" cy="15" r="2.2"/>',
   nextweek:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M9 15h6M13 12.5l2.5 2.5-2.5 2.5"/>',
   home:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
@@ -1268,13 +1721,16 @@ const ICONS = {
 function renderNav(){
   const n = document.getElementById('nav'); if (!n) return;
   const td = TODAY();
+  /* the tab Settings came from lights its button */
+  const at = state.tab==='settings' ? state.lastTab : state.tab;
   n.innerHTML = BAR.map(([k, label])=>{
-    /* Bookmarks: back to the one of its tabs last showing */
-    const target = k==='group' ? store.sub : k, on = k==='group' ? inGroup(state.tab) : state.tab===k;
+    const on = k==='care' ? at==='care' : isCheckTab(at);
     let cnt = '';
-    if (k==='week') { const ts = live().filter((t)=>matches(t, WEEK_FILTER[k]));
-      if (ts.length) cnt = `<span class="cnt${k==='week' && ts.some((t)=>nextDue(t) < td) ? ' late' : ''}">${ts.length}</span>`; }
-    return `<button class="${on?'active':''}" data-tab="${k==='group'?'group':k}"><span class="ico"><svg viewBox="0 0 24 24">${ICONS[k==='group'?'lists':k]}</svg>${cnt}</span>${label}</button>`; }).join('');
+    /* Checklist: the tasks in Today, red while one is late; Care: the items wanting attention */
+    if (k==='checklist') { const ts = live().filter((t)=>matches(t, WEEK_FILTER.week));
+      if (ts.length) cnt = `<span class="cnt${ts.some((t)=>nextDue(t) < td) ? ' late' : ''}">${ts.length}</span>`; }
+    if (k==='care') { const n2 = careLive().filter((c)=>careAlert(c)).length; if (n2) cnt = `<span class="cnt late">${n2}</span>`; }
+    return `<button class="${on?'active':''}" data-tab="${k}"><span class="ico"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${cnt}</span>${label}</button>`; }).join('');
 }
 /* A redraw changes the page in place: what is the same stays, node for node,
    so the field being typed in is never replaced - on a phone, replacing it
@@ -1321,8 +1777,9 @@ function render(){
     `<button class="hdrbtn${state.tab==='settings'?' on':''}" data-tab="${state.tab==='settings'?state.lastTab:'settings'}" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24">${ICON_GEAR}</svg></button>`;
   const tabs = document.getElementById('tabs');
   if (!moved && tabs.offsetHeight) tabs.style.minHeight = tabs.offsetHeight + 'px';
-  const body = state.tab==='settings' ? screenSettings() : state.edit ? screenEdit() : state.view ? screenTask() : screenTasks();
-  paint(tabs, `<div class="tab">${state.about?aboutSheet():''}${state.bmEdit?bmSheet():''}${body}</div>`);
+  const body = state.tab==='settings' ? screenSettings() : state.edit ? screenEdit() : state.view ? screenTask() : state.tab==='care' ? screenCare() : screenTasks();
+  paint(tabs, `<div class="tab">${state.about?aboutSheet():''}${state.bmEdit?bmSheet():''}${state.tab==='care' && state.care.rec ? recSheet() : ''}${body}</div>`);
+  if (state.tab==='care') afterCare();
   wire();
   if (moved && typeof scrollTo==='function') scrollTo({ top: listWhere(w) ? ((state.listY||{})[w]||0) : 0 });
   if (typeof requestAnimationFrame === 'function') requestAnimationFrame(()=>{ tabs.style.minHeight=''; });
@@ -1347,7 +1804,12 @@ function wire(){
   on('reload', hardReload);
   on('about', ()=>{ state.about={ fresh:true }; state.sync=null; render(); state.about.fresh=false; });
   on('aboutclose', ()=>{ state.about=null; render(); });
-  on('tab', (v)=>{ if (state.edit) keepDraft(true); if (v==='group') v = store.sub || 'home'; if (inGroup(v)) store.sub = v; state.tab=v; state.view=null; state.edit=null; state.about=null; state.fopen=false; state.bmEdit=null;
+  on('tab', (v)=>{ if (state.edit) keepDraft(true); if (state.care.edit) keepCare(true);
+    if (v==='checklist') v = store.check || 'week';
+    if (v==='group') v = store.sub || 'home'; if (inGroup(v)) store.sub = v; if (isCheckTab(v)) store.check = v;
+    /* Care again from its own button: back to the grid */
+    if (v==='care' && state.tab==='care') state.care = careState();
+    state.tab=v; state.view=null; state.edit=null; state.about=null; state.fopen=false; state.bmEdit=null;
     if (v!=='settings') { state.lastTab = v; store.tab = v; save(); } render(); });
   on('install', async()=>{
     if (INSTALL_EVT) { INSTALL_EVT.prompt(); try { await INSTALL_EVT.userChoice; } catch (e) {} INSTALL_EVT=null; render(); return; }
@@ -1524,6 +1986,8 @@ function wire(){
       const t = store.tasks.find((x)=>x.id===E.id); state.edit = null; state.view = null;
       if (t) { t.deleted = NOW(); t.updated = t.deleted; commit('T:'+t.id); } else render(); });
   }
+
+  if (state.tab==='care') wireCare();
 
   /* settings */
   const u = document.getElementById('bkUrl'), k = document.getElementById('bkTok');

@@ -58,5 +58,8 @@
   /* app: this copy's version - one older than the newest seen is refused */
   const sync = (cfg, tabs, app) => call(cfg, 'sync', { tabs, app });
 
-  return { call, ping, pull, sync };
+  /* one photo of the Drive folder "Slate photos": { name, type, data (base64) } */
+  const photo = (cfg, name) => call(cfg, 'photo', { name });
+
+  return { call, ping, pull, sync, photo };
 }));
