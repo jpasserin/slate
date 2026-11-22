@@ -32,8 +32,9 @@
  * seen is kept in the Config tab (row "app"); a phone older than that is
  * refused, and told to reload, so an out-of-date copy never writes.
  *
- * PHOTOS (v3). The guides show photos kept in a Drive folder of yours,
- * "Slate photos" (made the first time it is asked for). The app asks for
+ * PHOTOS (v3). The guides show photos kept in a Drive folder of yours:
+ * the one PHOTO_FOLDER_ID names (v4), else "Slate photos", made the first
+ * time it is asked for. The app asks for
  * one by its file name, behind the same token; nothing in that folder is
  * ever shared. Only names of letters, digits, - _ . and spaces are read.
  *
@@ -42,11 +43,15 @@
  * the app did not send is kept. Adding a field never requires a redeploy.
  */
 
-var BACKEND_VERSION = 3;
+var BACKEND_VERSION = 4;
 
 /* ── configure ─────────────────────────────────────────────────────────── */
 var SHEET_ID = 'PUT_YOUR_SPREADSHEET_ID_HERE';
 var TOKEN    = 'PUT_A_LONG_RANDOM_STRING_HERE';
+/* The Drive folder of the guide photos: its id, the end of its url
+   (drive.google.com/drive/folders/<id>). Left as it is, a folder named
+   "Slate photos" is used, made the first time. */
+var PHOTO_FOLDER_ID = 'PUT_YOUR_PHOTO_FOLDER_ID_HERE';
 /* ──────────────────────────────────────────────────────────────────────── */
 
 /* RUN THIS ONCE from the editor (pick "authorize" in the dropdown, press Run)
@@ -83,6 +88,7 @@ function handle(e, body) {
 
 var PHOTO_FOLDER = 'Slate photos';
 function photoFolder() {
+  if (PHOTO_FOLDER_ID && !/^PUT_/.test(PHOTO_FOLDER_ID)) return DriveApp.getFolderById(PHOTO_FOLDER_ID);
   var it = DriveApp.getFoldersByName(PHOTO_FOLDER);
   return it.hasNext() ? it.next() : DriveApp.createFolder(PHOTO_FOLDER);
 }
@@ -91,7 +97,7 @@ function photo(name) {
   name = String(name || '');
   if (!/^[\w .-]{1,120}$/.test(name) || /^\.|\.\./.test(name)) throw new Error('bad photo name');
   var it = photoFolder().getFilesByName(name);
-  if (!it.hasNext()) throw new Error('not in the Drive folder "' + PHOTO_FOLDER + '"');
+  if (!it.hasNext()) throw new Error('not in the photo folder on Drive');
   var b = it.next().getBlob();
   return { name: name, type: b.getContentType(), data: Utilities.base64Encode(b.getBytes()) };
 }
