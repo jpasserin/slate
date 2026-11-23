@@ -106,6 +106,7 @@
   .field{margin-bottom:6px}
   .field>label,.field .lab{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10.5px;color:var(--muted);
     margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
+  .field>label.keep{text-transform:none;letter-spacing:0;font-size:12.5px;color:var(--txt)} .field>label.keep span+span{color:var(--muted);font-size:11.5px}
   .field .lab .gbtn{height:20px;min-width:22px;font-size:13px}
   input,select,textarea{width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:10px;
     padding:5px 10px;font-size:14px;font-family:inherit;outline:none}
@@ -271,9 +272,22 @@
   .rd{display:flex;align-items:baseline;gap:8px;padding:6px 0 2px}
   .rd .k{flex:1;font-size:13.5px} .rd .v{font-weight:700;font-variant-numeric:tabular-nums}
   .rd .v.good{color:var(--good)} .rd .v.bad{color:var(--bad)}
-  .chart{display:block;width:100%;height:46px;margin:2px 0 6px;background:var(--bg2);border-radius:8px}
   .lv{display:inline-block;margin-right:8px;font-size:12.5px;color:var(--muted)} .lv b{color:var(--txt)} .lv.bad b{color:var(--bad)}
   .upd .x{color:var(--muted);cursor:pointer;font-size:13px;flex:none;padding:0 2px}
+  /* an item's tabs */
+  .ctabs{display:flex;gap:4px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:3px;margin:2px 0 10px}
+  .ctabs button{flex:1;background:none;border:0;border-radius:9px;color:var(--muted);font:600 12.5px/1 inherit;font-family:inherit;padding:8px 2px;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap}
+  .ctabs button.on{background:var(--card2);color:var(--txt);box-shadow:0 1px 4px rgba(0,0,0,.35)}
+  .ctabs .tb{background:var(--bad);color:#fff;border-radius:8px;font-size:10px;min-width:16px;height:16px;line-height:16px;padding:0 4px}
+  .newcheck{width:100%;padding:12px;font-size:15px;margin:2px 0 10px}
+  .cpick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .cpick .chip.none{opacity:.55}
+  .cbig{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 12px 8px;margin-bottom:6px}
+  .bigchart{display:block;width:100%;height:auto;margin-top:2px}
+  .bigchart text{font-size:9.5px;fill:var(--muted);font-family:inherit} .bigchart text.u{font-size:9px}
+  .rd.tap{cursor:pointer;border-bottom:1px solid var(--line);padding:8px 0} .rd.tap.sel .k{color:var(--accent2);font-weight:600}
+  .chev{color:var(--muted);font-size:18px;line-height:1}
   .kv{padding:6px 0;border-bottom:1px solid var(--line)} .kv:last-of-type{border-bottom:0}
   .kv .k{display:block;font-size:11px;color:var(--muted);margin-bottom:1px} .kv .v{font-size:13.5px;overflow-wrap:anywhere}
   .sv{display:inline-flex;align-items:center;gap:6px;overflow-wrap:anywhere}
@@ -312,9 +326,9 @@
 </div>
 <nav id="nav"></nav>
 
-<script src="backend.js?v=20"></script>
+<script src="backend.js?v=21"></script>
 <script>
-const APP_VERSION="20";
+const APP_VERSION="21";
 const BK = window.SlateBackend;
 
 /* ------------------------------------------------------------------ store --
@@ -327,7 +341,7 @@ const store = Object.assign({ backend:{ url:'', token:'' }, backendVersion:null,
 const migrateKey = (k) => /^[TBCLG]:/.test(k) ? k : 'T:'+k;
 store.dirty = (store.dirty||[]).map(migrateKey);
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { /* private mode */ } };
-const careState = () => ({ view:null, edit:null, guide:null, rec:null, order:false, shown:{}, qr:false, delArm:null });
+const careState = () => ({ view:null, tab:'rem', chart:null, edit:null, guide:null, rec:null, order:false, shown:{}, qr:false, delArm:null });
 const state = { care:careState(), tab:'week', lastTab:'week', view:null, edit:null, about:null, bmEdit:null, sync:null, fopen:false, fpick:null, statPick:false, listY:0 };
 
 /* ------------------------------------------------------------- the model --
@@ -1340,20 +1354,6 @@ const ago = (d) => { const n = Math.round((dOf(TODAY()) - dOf(String(d).slice(0,
   return n<=0 ? 'today' : n===1 ? 'yesterday' : n<14 ? n + ' days ago' : n<60 ? Math.round(n/7) + ' weeks ago' : Math.round(n/30) + ' months ago'; };
 const fmtV = (v) => String(v).replace(/\.0+$/, '');
 
-/* A small line chart: the readings over time, the range as a band. */
-function chart(pts, d){
-  if (pts.length < 2) return '';
-  const W = 300, H = 64, P = 4, t0 = dOf(pts[0].date).getTime(), t1 = dOf(pts[pts.length-1].date).getTime() || t0 + 1;
-  let lo = Math.min(...pts.map((p)=>p.v)), hi = Math.max(...pts.map((p)=>p.v));
-  if (d && d.lo!=null) lo = Math.min(lo, d.lo); if (d && d.hi!=null) hi = Math.max(hi, d.hi);
-  if (hi===lo) { hi += 1; lo -= 1; }
-  const x = (t) => P + (W-2*P) * (t1===t0 ? 1 : (t - t0) / (t1 - t0)), y = (v) => H - P - (H-2*P) * (v - lo) / (hi - lo);
-  const band = d && (d.lo!=null || d.hi!=null) ? `<rect x="0" width="${W}" y="${y(d.hi!=null ? d.hi : hi)}" height="${Math.max(0, y(d.lo!=null ? d.lo : lo) - y(d.hi!=null ? d.hi : hi))}" fill="var(--good)" opacity=".12"/>` : '';
-  const xy = pts.map((p)=>[x(dOf(p.date).getTime()), y(p.v)]);
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${band}<polyline points="${xy.map((q)=>q.join(',')).join(' ')}" fill="none" stroke="var(--accent2)" stroke-width="1.8" vector-effect="non-scaling-stroke"/>${
-    xy.map((q, i)=>`<circle cx="${q[0]}" cy="${q[1]}" r="2.4" fill="${d && inRange(d, pts[i].v)===false ? 'var(--bad)' : 'var(--accent2)'}"/>`).join('')}</svg>`;
-}
-
 /* ----------------------------------------------------------- the guides --
    A guide is one row per section; its text is a light Markdown: paragraphs,
    "- " and "1. " lists, **bold**, "> " a note, "| a | b |" tables, "### "
@@ -1469,34 +1469,80 @@ function screenCare(){
 function screenCareItem(){
   const C = state.care, c = careById(C.view), defs = readDefs(c.readings), logs = logsOf(c.id), rem = remindersOf(c), task = careTask(c);
   const alert = careAlert(c), sec = kvLines(c.secrets), det = kvLines(c.details), gs = guidesOf(c.id), w = wifiOf(c);
-  const latest = defs.map((d)=>{ const s = series(c.id, d); if (!s.length) return '';
-    const last = s[s.length-1];
-    if (d.meter) { const pd = perDay(s), r = pd[pd.length-1];
-      return `<div class="rd"><span class="k">${esc(d.name)}</span><span class="v">${esc(fmtV(last.v))} ${esc(d.unit)}</span><span class="when">${r ? esc(fmtV(r.v) + ' ' + d.unit + '/day since ' + dLabel(r.from)) : esc(ago(last.date))}</span></div>${chart(pd, null)}`; }
-    const ok = inRange(d, last.v);
-    return `<div class="rd"><span class="k">${esc(d.name)}</span><span class="v ${ok===false?'bad':ok?'good':''}">${esc(fmtV(last.v))} ${esc(d.unit)}</span><span class="when">${esc(rangeText(d) ? rangeText(d) + ' · ' : '')}${esc(ago(last.date))}</span></div>${chart(s.slice(-24), d)}`; }).join('');
-  return `
-  <div class="page care">
-    <div class="ptitle"><span class="cic big">${careIcon(c)}</span><h2>${esc(c.name)}</h2><button class="gbtn" data-cedit="${esc(c.id)}" aria-label="Edit">✏️</button></div>
-    ${alert ? `<div class="status bad" style="margin:-4px 0 6px">${esc(alert)}</div>` : ''}
-    <div class="sec"><span>Reminders</span>${task ? `<button class="chip sm" data-ctask="${esc(task.id)}">Edit</button>` : `<button class="chip sm add" data-cremind="1">+ Reminders</button>`}</div>
+  /* the tabs: Reminders and Data always; Info and Guide when there is something in them */
+  const tabs = [['rem', 'Reminders'], ['data', 'Data']].concat(det.length || sec.length || w ? [['info', 'Info']] : [], gs.length ? [['guide', 'Guide']] : []);
+  if (!tabs.some(([k])=>k===C.tab)) C.tab = 'rem';
+  const late = rem.filter((x)=>x.st.due && x.st.due < TODAY()).length, outN = defs.filter((d)=>{ const s = series(c.id, d); return s.length && inRange(d, s[s.length-1].v)===false; }).length;
+  const badge = { rem:late, data:outN };
+  let body = '';
+  if (C.tab==='rem') body = `
+    <div class="sec"><span>${rem.length ? rem.length + ' to do' : ''}</span>${task ? `<button class="chip sm" data-ctask="${esc(task.id)}">Edit</button>` : `<button class="chip sm add" data-cremind="1">+ Reminders</button>`}</div>
     ${rem.map(({ t, i, st })=>`<div class="vli"><span class="ck" data-cck="${esc(t.id)}|${i}"></span><span class="t">${esc(st.text || '(no text)')}${
       st.repeat ? `<span class="rept">↻ ${esc(repeatText(st.repeat))}${st.last ? ' · last ' + esc(dLabel(st.last)) : ''}</span>` : ''}</span>${st.due ? `<span class="when ${dueClass(st.due)}">${esc(dLabel(st.due))}</span>` : ''}</div>`).join('')
-      || `<div class="empty">${task ? 'Nothing to do.' : 'No reminders yet.'}</div>`}
-    ${logs.length ? `<div class="sec"><span>Log</span><button class="gbtn" data-crec="1" aria-label="Record">+</button></div>
-      ${latest}
-      ${logs.slice(0, 30).map((l)=>`<div class="upd"><span class="when">${esc(dLabel(l.date))}</span><div class="info">${kvLines(l.values).map(({ k, v })=>{ const d = defs.find((x)=>same(x.name, k)), ok = d ? inRange(d, num(v)) : null;
-        return `<span class="lv ${ok===false?'bad':''}">${esc(k)} <b>${esc(v)}</b>${d && d.unit ? ' ' + esc(d.unit) : ''}</span>`; }).join(' ')}${l.note ? `<div>${esc(l.note)}</div>` : ''}</div><span class="x" data-cldel="${esc(l.id)}">${C.delArm===l.id ? 'Delete?' : '×'}</span></div>`).join('')}` :
-      `<div class="sec"><span>Log</span><button class="gbtn" data-crec="1" aria-label="Record">+</button></div><div class="empty">Nothing recorded yet.</div>`}
+      || `<div class="empty">${task ? 'Nothing to do.' : 'No reminders yet.'}</div>`}`;
+  if (C.tab==='data') body = screenCareData(c, defs, logs);
+  if (C.tab==='info') body = `
     ${det.length ? `<div class="sec">Details</div>${det.map(({ k, v })=>`<div class="kv">${k ? `<span class="k">${esc(k)}</span>` : ''}<span class="v">${esc(v)}</span></div>`).join('')}` : ''}
     ${sec.length ? `<div class="sec">Secrets</div>${sec.map(({ k, v }, i)=>`<div class="kv">${k ? `<span class="k">${esc(k)}</span>` : ''}<span class="v sv">${
       C.shown[i] ? esc(v) || '—' : v ? '••••••' : '—'}${v ? `<button class="chip sm" data-csec="${i}">${C.shown[i] ? 'Hide' : 'Show'}</button><button class="chip sm" data-ccopy="${i}">Copy</button>` : ''}</span></div>`).join('')}` : ''}
     ${w ? `<div class="sec"><span>Wi-Fi</span><button class="chip sm${C.qr?' on':''}" data-cqr="1">${C.qr ? 'Hide QR' : 'QR code'}</button></div>
-      ${C.qr ? `<div class="qr">${QR_SVG[wifiText(w)] || '<div class="ph">Drawing…</div>'}<div class="hint">${esc(w.ssid)}: point a phone's camera here to join.</div></div>` : ''}` : ''}
-    ${gs.length ? `<div class="sec">Guide</div>${gs.map((g)=>`<div class="trow" data-gopen="${esc(g.id)}"><span class="gnum">${esc(g.order)}</span><span class="tn">${esc(g.title)}</span></div>`).join('')}` : ''}
+      ${C.qr ? `<div class="qr">${QR_SVG[wifiText(w)] || '<div class="ph">Drawing…</div>'}<div class="hint">${esc(w.ssid)}: point a phone's camera here to join.</div></div>` : ''}` : ''}`;
+  if (C.tab==='guide') body = gs.map((g)=>`<div class="trow" data-gopen="${esc(g.id)}"><span class="gnum">${esc(g.order)}</span><span class="tn">${esc(g.title)}</span><span class="chev">›</span></div>`).join('');
+  return `
+  <div class="page care">
+    <div class="ptitle"><span class="cic big">${careIcon(c)}</span><h2>${esc(c.name)}</h2><button class="gbtn" data-cedit="${esc(c.id)}" aria-label="Edit">✏️</button></div>
+    ${alert ? `<div class="status bad" style="margin:-4px 0 8px">${esc(alert)}</div>` : ''}
+    <div class="ctabs">${tabs.map(([k, label])=>`<button class="${C.tab===k?'on':''}" data-ctab="${k}">${label}${badge[k] ? `<span class="tb">${badge[k]}</span>` : ''}</button>`).join('')}</div>
+    ${body}
     <div class="stamp">${esc(kindOf(c).label)}${c.updated ? ' · Updated ' + esc(dLabel(c.updated)) : ''}</div>
     <div class="closebar"><button class="btn close" data-cclose="1">Close</button></div>
   </div>`;
+}
+/* Data: a New check button; one chart, the reading picked above it; every
+   reading's last value (a tap picks its chart); then every entry. */
+function screenCareData(c, defs, logs){
+  const C = state.care;
+  const withData = defs.filter((d)=>series(c.id, d).length);
+  let d = defs.find((x)=>same(x.name, C.chart||'')) || withData[0] || defs[0];
+  const pick = defs.length ? `<div class="cpick">${defs.map((x)=>`<button class="chip sm${d===x?' on':''}${series(c.id, x).length?'':' none'}" data-cchart="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div>` : '';
+  let main = '';
+  if (d) { const s = series(c.id, d), last = s[s.length-1];
+    if (d.meter) { const pd = perDay(s), r = pd[pd.length-1];
+      main = `<div class="cbig"><div class="rd"><span class="k">${esc(d.name)} per day</span><span class="v">${r ? esc(fmtV(r.v) + ' ' + d.unit) : '—'}</span><span class="when">${last ? esc('meter ' + fmtV(last.v) + ' ' + d.unit + ' · ' + ago(last.date)) : ''}</span></div>
+        ${pd.length >= 2 ? bigChart(pd, null, d.unit + '/day') : `<div class="empty">${s.length ? 'One more reading and the use per day shows here.' : 'No reading yet.'}</div>`}</div>`; }
+    else { const ok = last ? inRange(d, last.v) : null;
+      main = `<div class="cbig"><div class="rd"><span class="k">${esc(d.name)}</span><span class="v ${ok===false?'bad':ok?'good':''}">${last ? esc(fmtV(last.v) + ' ' + d.unit) : '—'}</span><span class="when">${esc([rangeText(d) ? 'aim ' + rangeText(d) : '', last ? ago(last.date) : ''].filter(Boolean).join(' · '))}</span></div>
+        ${s.length >= 2 ? bigChart(s.slice(-60), d, d.unit) : `<div class="empty">${s.length ? 'One more reading and its curve shows here.' : 'No reading yet.'}</div>`}</div>`; } }
+  const latest = defs.map((x)=>{ const s = series(c.id, x), last = s[s.length-1], ok = last && !x.meter ? inRange(x, last.v) : null;
+    return `<div class="rd tap${d===x?' sel':''}" data-cchart="${esc(x.name)}"><span class="k">${esc(x.name)}</span><span class="v ${ok===false?'bad':ok?'good':''}">${last ? esc(fmtV(last.v) + ' ' + x.unit) : '—'}</span><span class="when">${last ? esc(dLabel(last.date)) : ''}</span></div>`; }).join('');
+  return `
+    <button class="btn primary newcheck" data-crec="1">+ New check</button>
+    ${pick}${main}
+    ${defs.length ? `<div class="sec">Last values</div>${latest}` : ''}
+    <div class="sec">History</div>
+    ${logs.slice(0, 40).map((l)=>`<div class="upd"><span class="when">${esc(dLabel(l.date))}</span><div class="info">${kvLines(l.values).map(({ k, v })=>{ const x = defs.find((y)=>same(y.name, k)), ok = x ? inRange(x, num(v)) : null;
+      return `<span class="lv ${ok===false?'bad':''}">${esc(k)} <b>${esc(v)}</b>${x && x.unit ? ' ' + esc(x.unit) : ''}</span>`; }).join(' ')}${l.note ? `<div>${esc(l.note)}</div>` : ''}</div><span class="x" data-cldel="${esc(l.id)}">${C.delArm===l.id ? 'Delete?' : '×'}</span></div>`).join('')
+      || '<div class="empty">Nothing recorded yet.</div>'}`;
+}
+/* The chart of one reading: its values over time, the range it should stay
+   in as a green band, the lowest and highest on the left, first and last day. */
+function bigChart(pts, d, unit){
+  const W = 320, H = 150, L = 34, R = 8, T = 10, B = 20, t0 = dOf(pts[0].date).getTime(), t1 = dOf(pts[pts.length-1].date).getTime();
+  let lo = Math.min(...pts.map((p)=>p.v)), hi = Math.max(...pts.map((p)=>p.v));
+  if (d && d.lo!=null) lo = Math.min(lo, d.lo); if (d && d.hi!=null) hi = Math.max(hi, d.hi);
+  if (hi===lo) { hi += 1; lo -= 1; }
+  const pad = (hi - lo) * .08; lo -= pad; hi += pad;
+  const x = (t) => L + (W-L-R) * (t1===t0 ? 1 : (t - t0) / (t1 - t0)), y = (v) => T + (H-T-B) * (hi - v) / (hi - lo);
+  const nf = (v) => fmtV(Math.round(v * 100) / 100);
+  const band = d && (d.lo!=null || d.hi!=null) ? `<rect x="${L}" width="${W-L-R}" y="${y(d.hi!=null ? d.hi : hi)}" height="${Math.max(0, y(d.lo!=null ? d.lo : lo) - y(d.hi!=null ? d.hi : hi))}" fill="var(--good)" opacity=".13"/>` : '';
+  const ticks = [hi - pad, lo + pad].concat(d && d.lo!=null ? [d.lo] : [], d && d.hi!=null ? [d.hi] : []).filter((v, i, a)=>a.findIndex((u)=>Math.abs(u-v) < (hi-lo)*.06)===i);
+  const xy = pts.map((p)=>[x(dOf(p.date).getTime()), y(p.v)]);
+  return `<svg class="bigchart" viewBox="0 0 ${W} ${H}">${band}
+    ${ticks.map((v)=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-5}" y="${y(v)+3}" text-anchor="end">${esc(nf(v))}</text>`).join('')}
+    <polyline points="${xy.map((q)=>q.join(',')).join(' ')}" fill="none" stroke="var(--accent2)" stroke-width="2"/>
+    ${xy.map((q, i)=>`<circle cx="${q[0]}" cy="${q[1]}" r="3.2" fill="${d && inRange(d, pts[i].v)===false ? 'var(--bad)' : 'var(--accent2)'}"/>`).join('')}
+    <text x="${L}" y="${H-5}">${esc(dLabel(pts[0].date))}</text><text x="${W-R}" y="${H-5}" text-anchor="end">${esc(dLabel(pts[pts.length-1].date))}</text>
+    ${unit ? `<text x="${W-R}" y="${T+2}" text-anchor="end" class="u">${esc(unit)}</text>` : ''}</svg>`;
 }
 function screenGuide(){
   const C = state.care, c = careById(C.view), gs = guidesOf(c.id), i = gs.findIndex((g)=>g.id===C.guide);
@@ -1519,9 +1565,9 @@ function recSheet(){
   <div class="sheetwrap">
     <div class="scrim" data-crclose="1"></div>
     <div class="sheet${r.fresh?' enter':''}">
-      <h3>${esc(c.name)}: record</h3>
+      <h3>${esc(c.name)}: new check</h3>
       <div class="field"><label>Day</label><input type="date" id="crDate" value="${esc(r.date)}"></div>
-      ${defs.map((d, i)=>`<div class="field"><label><span>${esc(d.name)}${d.unit ? ' (' + esc(d.unit) + ')' : ''}</span><span>${esc(rangeText(d))}</span></label>
+      ${defs.map((d, i)=>`<div class="field"><label class="keep"><span>${esc(d.name)}${d.unit ? ' (' + esc(d.unit) + ')' : ''}</span><span>${esc(rangeText(d))}</span></label>
         <input id="crV${i}" inputmode="decimal" value="${esc(r.vals[i]||'')}"></div>`).join('')}
       <div class="field"><label>Note</label><textarea id="crNote" placeholder="What was done, what was seen…">${esc(r.note)}</textarea></div>
       <div class="foot"><button class="btn primary" style="flex:1" data-crsave="1">Save</button><button class="btn close" data-crclose="1">Cancel</button></div>
@@ -1611,9 +1657,11 @@ function wireCare(){
   on('ccopy', (i)=>{ const c = careById(C.view), s = c && kvLines(c.secrets)[+i];
     if (s && typeof navigator !== 'undefined' && navigator.clipboard) navigator.clipboard.writeText(s.v).catch(()=>{}); });
   on('cqr', ()=>{ C.qr = !C.qr; render(); });
+  on('ctab', (k)=>{ C.tab = k; C.delArm = null; render(); });
+  on('cchart', (n)=>{ C.chart = n; render(); });
   on('gopen', (id)=>{ C.guide = id; state.focus = null; render(); if (typeof scrollTo==='function') scrollTo({ top:0 }); });
   on('gsec', (n)=>{ const g = guidesOf(C.view).find((x)=>String(x.order)===String(n)); if (g) { C.guide = g.id; render(); if (typeof scrollTo==='function') scrollTo({ top:0 }); } });
-  on('gclose', ()=>{ C.guide = null; render(); });
+  on('gclose', ()=>{ C.guide = null; C.tab = 'guide'; render(); });
   /* the record sheet */
   const r = C.rec;
   if (r) { const c = careById(C.view);
@@ -1631,7 +1679,7 @@ function wireCare(){
       if (!e.id && !d.readings.trim()) d.readings = CARE_KINDS[k].readings || '';
       if (!e.id && !d.secrets.trim()) d.secrets = CARE_KINDS[k].secrets || '';
       render(); });
-    on('ceclose', ()=>{ keepCare(true); const id = e.id; state.care = Object.assign(careState(), { view:id && careById(id) ? id : null }); render(); });
+    on('ceclose', ()=>{ keepCare(true); const id = e.id, tab = C.tab; state.care = Object.assign(careState(), { view:id && careById(id) ? id : null, tab }); render(); });
     on('cdel', ()=>{ if (!e.delArm) { e.delArm = true; render(); return; }
       const c = store.care.find((x)=>x.id===e.id); state.care = careState();
       if (c) { c.deleted = NOW(); c.updated = c.deleted; commit('C:'+c.id); } else render(); }); }
